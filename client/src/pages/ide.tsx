@@ -7,6 +7,7 @@ import BlockCanvas from "@/components/ide/BlockCanvas";
 import CodeEditor from "@/components/ide/CodeEditor";
 import SimulationViewport from "@/components/ide/SimulationViewport";
 import ConsolePanel from "@/components/ide/ConsolePanel";
+import TestRunner from "@/components/ide/TestRunner";
 import { useProjects } from "@/hooks/use-projects";
 
 export type ActiveTab = 'visual' | 'python' | '3d';
@@ -14,6 +15,7 @@ export type ActiveTab = 'visual' | 'python' | '3d';
 export default function IDE() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('visual');
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [showTestRunner, setShowTestRunner] = useState(false);
   const { data: projects, isLoading } = useProjects();
 
   // Select first project by default
@@ -31,7 +33,7 @@ export default function IDE() {
 
   return (
     <div className="h-screen flex flex-col bg-editor-bg text-text-primary font-interface overflow-hidden">
-      <TopMenuBar />
+      <TopMenuBar onToggleTestRunner={() => setShowTestRunner(!showTestRunner)} />
       
       <div className="flex-1 flex overflow-hidden">
         <FileExplorer 
@@ -72,7 +74,7 @@ export default function IDE() {
         </main>
       </div>
       
-      <ConsolePanel />
+      {showTestRunner ? <TestRunner /> : <ConsolePanel />}
     </div>
   );
 }

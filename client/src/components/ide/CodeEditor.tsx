@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, Download } from "lucide-react";
+import { Copy, Download, Play, Eye, EyeOff } from "lucide-react";
 import type { Project } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 interface CodeEditorProps {
   project?: Project;
@@ -10,6 +11,8 @@ interface CodeEditorProps {
 
 export default function CodeEditor({ project, fullWidth = false }: CodeEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  const [isReadOnly, setIsReadOnly] = useState(true);
   const [code, setCode] = useState(`# Generated from visual blocks
 import robot
 import time
@@ -28,8 +31,20 @@ if __name__ == "__main__":
     }
   }, [project?.pythonCode]);
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(code);
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast({
+        title: "Code copied",
+        description: "Python code has been copied to clipboard",
+      });
+    } catch (err) {
+      toast({
+        title: "Copy failed",
+        description: "Could not copy code to clipboard",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleExportCode = () => {
@@ -55,6 +70,15 @@ if __name__ == "__main__":
             variant="ghost"
             size="sm"
             className="text-text-secondary hover:text-text-primary"
+            onClick={() => setIsReadOnly(!isReadOnly)}
+            data-testid="button-toggle-edit"
+          >
+            {isReadOnly ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-text-secondary hover:text-text-primary"
             onClick={handleCopyCode}
             data-testid="button-copy-code"
           >
@@ -69,46 +93,71 @@ if __name__ == "__main__":
           >
             <Download className="w-3 h-3" />
           </Button>
+          {fullWidth && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-green-400 hover:text-green-300"
+              data-testid="button-run-code"
+            >
+              <Play className="w-3 h-3" />
+            </Button>
+          )}
         </div>
       </div>
       
       <div className="flex-1 relative">
-        <div 
-          ref={editorRef}
-          className="absolute inset-0 p-4 overflow-auto font-code text-sm"
-          data-testid="code-editor"
-        >
-          <pre className="text-text-primary leading-relaxed">
-            <code>
-              {code.split('\n').map((line, index) => (
-                <div key={index} className="min-h-[1.25rem]">
-                  {line.split(' ').map((word, wordIndex) => {
-                    // Simple syntax highlighting
-                    if (['import', 'def', 'for', 'if', 'in', 'range'].includes(word)) {
-                      return <span key={wordIndex} className="text-purple-400">{word} </span>;
-                    }
-                    if (['robot', 'time', '__name__', '__main__'].includes(word)) {
-                      return <span key={wordIndex} className="text-blue-400">{word} </span>;
-                    }
-                    if (['main'].includes(word)) {
-                      return <span key={wordIndex} className="text-yellow-400">{word} </span>;
-                    }
-                    if (!isNaN(Number(word)) && word !== '') {
-                      return <span key={wordIndex} className="text-green-400">{word} </span>;
-                    }
-                    if (word.startsWith('"') || word.startsWith("'")) {
-                      return <span key={wordIndex} className="text-green-400">{word} </span>;
-                    }
-                    if (word.startsWith('#')) {
-                      return <span key={wordIndex} className="text-text-secondary">{word} </span>;
-                    }
-                    return <span key={wordIndex} className="text-text-primary">{word} </span>;
-                  })}
-                </div>
-              ))}
-            </code>
-          </pre>
-        </div>
+        {isReadOnly ? (
+          <div 
+            ref={editorRef}
+            className="absolute inset-0 p-4 overflow-auto font-code text-sm"
+            data-testid="code-editor"
+          >
+            <pre className="text-text-primary leading-relaxed">
+              <code>
+                {code.split('\n').map((line, index) => (
+                  <div key={index} className="min-h-[1.25rem] flex">
+                    <span className="text-text-secondary w-8 text-right mr-4 select-none">
+                      {index + 1}
+                    </span>
+                    <div>
+                      {line.split(' ').map((word, wordIndex) => {
+                        // Enhanced syntax highlighting
+                        if (['import', 'def', 'for', 'if', 'in', 'range', 'while', 'elif', 'else', 'try', 'except', 'finally', 'with', 'as', 'return'].includes(word)) {
+                          return <span key={wordIndex} className="text-purple-400">{word} </span>;
+                        }
+                        if (['robot', 'time', '__name__', '__main__'].includes(word)) {
+                          return <span key={wordIndex} className="text-blue-400">{word} </span>;
+                        }
+                        if (['main', 'move_forward', 'move_backward', 'turn_left', 'turn_right', 'sleep'].includes(word.replace(/[(),:]/g, ''))) {
+                          return <span key={wordIndex} className="text-yellow-400">{word} </span>;
+                        }
+                        if (!isNaN(Number(word)) && word !== '') {
+                          return <span key={wordIndex} className="text-green-400">{word} </span>;
+                        }
+                        if (word.startsWith('"') || word.startsWith("'")) {
+                          return <span key={wordIndex} className="text-green-400">{word} </span>;
+                        }
+                        if (word.startsWith('#')) {
+                          return <span key={wordIndex} className="text-text-secondary">{word} </span>;
+                        }
+                        return <span key={wordIndex} className="text-text-primary">{word} </span>;
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </code>
+            </pre>
+          </div>
+        ) : (
+          <textarea
+            className="absolute inset-0 p-4 w-full h-full bg-editor-bg text-text-primary font-code text-sm resize-none border-none outline-none"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="Edit Python code here..."
+            data-testid="code-editor-textarea"
+          />
+        )}
       </div>
     </div>
   );

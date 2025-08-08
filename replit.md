@@ -4,6 +4,19 @@
 
 A comprehensive web-based integrated development environment (IDE) for visual robot programming. The application provides a drag-and-drop block-based programming interface that generates Python code for robot control, combined with a 3D simulation environment. Users can create, edit, and test robot programs through visual blocks, view the generated Python code, and simulate robot behavior in a 3D environment.
 
+## Recent Updates (January 2025)
+
+**Enhanced IDE Features:**
+- ✅ Auto-save functionality for visual blocks and generated Python code
+- ✅ Enhanced syntax highlighting with line numbers in code editor
+- ✅ Toggle between read-only and editable code editor modes
+- ✅ Built-in test runner with automated test case execution
+- ✅ Improved block palette with better visual icons
+- ✅ Enhanced simulation controls with speed adjustment
+- ✅ Project creation functionality with toast notifications
+- ✅ Better console panel with export and clear options
+- ✅ Responsive toolbar with save, export, and test buttons
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -32,10 +45,13 @@ Preferred communication style: Simple, everyday language.
 
 ### IDE Components
 - **Visual Programming**: Drag-and-drop block system with categorized blocks (motion, control, sensing, events)
-- **Code Generation**: Automatic Python code generation from visual blocks
-- **3D Simulation**: Three.js integration for robot simulation and visualization
-- **Project Management**: File explorer with project organization and management capabilities
+- **Code Generation**: Automatic Python code generation from visual blocks with real-time updates
+- **Code Editor**: Enhanced Python editor with syntax highlighting, line numbers, and editable/read-only modes
+- **3D Simulation**: Three.js integration for robot simulation with speed controls and real-time stats
+- **Test Runner**: Automated testing framework with individual and batch test execution
+- **Project Management**: File explorer with project creation, organization, and management capabilities
 - **Multi-tab Interface**: Separate views for visual programming, Python code editing, and 3D simulation
+- **Console System**: Comprehensive logging with export functionality and problem detection
 
 ### Authentication and Session Management
 - **Session Storage**: PostgreSQL-based session storage using connect-pg-simple

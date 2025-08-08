@@ -1,10 +1,11 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useBlocks } from "@/hooks/use-blocks";
 import { Block } from "@shared/schema";
-import { Flag, ArrowUp, Repeat } from "lucide-react";
+import { Flag, ArrowUp, Repeat, RotateCw, RotateCcw, Clock, Eye, Ruler } from "lucide-react";
 import { blockTypes, getBlockConfig } from "@/lib/blockTypes";
 import { generatePythonCode } from "@/lib/codeGenerator";
 import type { Project } from "@shared/schema";
+import { useUpdateProject } from "@/hooks/use-projects";
 
 interface BlockCanvasProps {
   project?: Project;
@@ -16,6 +17,7 @@ interface CanvasBlock extends Block {
 
 export default function BlockCanvas({ project }: BlockCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
+  const { mutate: updateProject } = useUpdateProject();
   const [blocks, setBlocks] = useState<CanvasBlock[]>([
     {
       id: 'start-1',
@@ -50,6 +52,20 @@ export default function BlockCanvas({ project }: BlockCanvasProps) {
       inputs: { degrees: 90 },
     },
   ]);
+
+  // Auto-save blocks and generated code when blocks change
+  useEffect(() => {
+    if (project && blocks.length > 0) {
+      const pythonCode = generatePythonCode(blocks);
+      updateProject({ 
+        id: project.id, 
+        updates: { 
+          blocks: blocks, 
+          pythonCode 
+        } 
+      });
+    }
+  }, [blocks, project, updateProject]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -125,9 +141,14 @@ export default function BlockCanvas({ project }: BlockCanvasProps) {
     const getIcon = () => {
       switch (block.type) {
         case 'when_flag_clicked': return <Flag className="w-4 h-4 text-white" />;
-        case 'move_forward': 
-        case 'move_backward': return <ArrowUp className="w-4 h-4 text-white" />;
+        case 'move_forward': return <ArrowUp className="w-4 h-4 text-white" />;
+        case 'move_backward': return <ArrowUp className="w-4 h-4 text-white rotate-180" />;
+        case 'turn_left': return <RotateCcw className="w-4 h-4 text-white" />;
+        case 'turn_right': return <RotateCw className="w-4 h-4 text-white" />;
         case 'repeat': return <Repeat className="w-4 h-4 text-white" />;
+        case 'wait': return <Clock className="w-4 h-4 text-white" />;
+        case 'touching': return <Eye className="w-4 h-4 text-white" />;
+        case 'distance': return <Ruler className="w-4 h-4 text-white" />;
         default: return null;
       }
     };

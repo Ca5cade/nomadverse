@@ -18,6 +18,8 @@ export default function SimulationViewport({ project, fullWidth = false }: Simul
     objects: 3,
     time: 2.5,
   });
+  
+  const [simulationSpeed, setSimulationSpeed] = useState(1.0);
 
   useEffect(() => {
     if (canvasRef.current && !sceneRef.current) {
@@ -136,7 +138,7 @@ export default function SimulationViewport({ project, fullWidth = false }: Simul
 
         {/* Simulation Stats */}
         <div 
-          className="absolute top-4 right-4 bg-black bg-opacity-70 rounded p-2 text-xs space-y-1"
+          className="absolute top-4 right-4 bg-black bg-opacity-70 rounded p-3 text-xs space-y-2"
           data-testid="simulation-stats"
         >
           <div className="flex justify-between">
@@ -150,6 +152,28 @@ export default function SimulationViewport({ project, fullWidth = false }: Simul
           <div className="flex justify-between">
             <span className="text-text-secondary">Time:</span>
             <span className="text-text-primary">{stats.time.toFixed(1)}s</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-text-secondary">Speed:</span>
+            <div className="flex items-center space-x-1">
+              <input 
+                type="range" 
+                min="0.1" 
+                max="3.0" 
+                step="0.1" 
+                value={simulationSpeed}
+                onChange={(e) => setSimulationSpeed(parseFloat(e.target.value))}
+                className="w-12 h-1"
+                data-testid="simulation-speed-slider"
+              />
+              <span className="text-text-primary w-8">{simulationSpeed.toFixed(1)}x</span>
+            </div>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-text-secondary">Status:</span>
+            <span className={isRunning ? "text-green-400" : "text-orange-400"}>
+              {isRunning ? "Running" : "Paused"}
+            </span>
           </div>
         </div>
       </div>

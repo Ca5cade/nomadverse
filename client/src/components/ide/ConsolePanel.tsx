@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, Trash2, Download } from "lucide-react";
 
 export default function ConsolePanel() {
   const [activeTab, setActiveTab] = useState<'console' | 'output' | 'problems'>('console');
@@ -69,15 +69,33 @@ export default function ConsolePanel() {
           Problems
         </Button>
         <div className="flex-1"></div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="px-2 py-2 text-text-secondary hover:text-text-primary"
-          onClick={() => setIsVisible(false)}
-          data-testid="button-close-console"
-        >
-          <X className="w-3 h-3" />
-        </Button>
+        <div className="flex space-x-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="px-2 py-2 text-text-secondary hover:text-text-primary"
+            data-testid="button-clear-console"
+          >
+            <Trash2 className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="px-2 py-2 text-text-secondary hover:text-text-primary"
+            data-testid="button-export-logs"
+          >
+            <Download className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="px-2 py-2 text-text-secondary hover:text-text-primary"
+            onClick={() => setIsVisible(false)}
+            data-testid="button-close-console"
+          >
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
       </div>
       
       <div className="flex-1 p-3 overflow-y-auto font-code text-xs" data-testid="console-content">

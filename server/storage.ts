@@ -99,6 +99,10 @@ export class MemStorage implements IStorage {
     const project: Project = {
       ...insertProject,
       id,
+      description: insertProject.description || null,
+      blocks: insertProject.blocks || [],
+      pythonCode: insertProject.pythonCode || '',
+      sceneConfig: insertProject.sceneConfig || {},
       createdAt: now,
       updatedAt: now,
     };
@@ -133,7 +137,11 @@ export class MemStorage implements IStorage {
 
   async createFile(insertFile: InsertFile): Promise<File> {
     const id = randomUUID();
-    const file: File = { ...insertFile, id };
+    const file: File = { 
+      ...insertFile, 
+      id,
+      content: insertFile.content || ''
+    };
     this.files.set(id, file);
     return file;
   }
