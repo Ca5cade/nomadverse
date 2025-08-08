@@ -1,12 +1,27 @@
 import { Button } from "@/components/ui/button";
-import { Play, Square, Bot, Save, Download, Upload, Zap } from "lucide-react";
+import { Play, Square, Bot, Save, Download, Upload, Zap, Eye, EyeOff, Sidebar, Palette, Terminal } from "lucide-react";
 
 interface TopMenuBarProps {
   onToggleTestRunner?: () => void;
   onRunSimulation?: () => void;
+  onToggleFileExplorer?: () => void;
+  onToggleBlockPalette?: () => void;
+  onToggleConsole?: () => void;
+  showFileExplorer?: boolean;
+  showBlockPalette?: boolean;
+  showConsole?: boolean;
 }
 
-export default function TopMenuBar({ onToggleTestRunner, onRunSimulation }: TopMenuBarProps) {
+export default function TopMenuBar({ 
+  onToggleTestRunner, 
+  onRunSimulation, 
+  onToggleFileExplorer,
+  onToggleBlockPalette,
+  onToggleConsole,
+  showFileExplorer = true,
+  showBlockPalette = true,
+  showConsole = true
+}: TopMenuBarProps) {
   return (
     <header className="bg-panel-bg border-b border-border-color px-4 py-2 flex items-center justify-between">
       <div className="flex items-center space-x-4">
@@ -58,6 +73,39 @@ export default function TopMenuBar({ onToggleTestRunner, onRunSimulation }: TopM
         </nav>
       </div>
       <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 border-r border-border-color pr-3 mr-3">
+          <Button 
+            variant="ghost"
+            size="sm"
+            className={`text-xs ${showFileExplorer ? 'text-blue-400 bg-blue-500/10' : 'text-text-secondary hover:text-text-primary'}`}
+            onClick={onToggleFileExplorer}
+            title="Toggle File Explorer"
+            data-testid="button-toggle-files"
+          >
+            <Sidebar className="w-3 h-3" />
+          </Button>
+          <Button 
+            variant="ghost"
+            size="sm"
+            className={`text-xs ${showBlockPalette ? 'text-blue-400 bg-blue-500/10' : 'text-text-secondary hover:text-text-primary'}`}
+            onClick={onToggleBlockPalette}
+            title="Toggle Block Palette"
+            data-testid="button-toggle-blocks"
+          >
+            <Palette className="w-3 h-3" />
+          </Button>
+          <Button 
+            variant="ghost"
+            size="sm"
+            className={`text-xs ${showConsole ? 'text-blue-400 bg-blue-500/10' : 'text-text-secondary hover:text-text-primary'}`}
+            onClick={onToggleConsole}
+            title="Toggle Console"
+            data-testid="button-toggle-console"
+          >
+            <Terminal className="w-3 h-3" />
+          </Button>
+        </div>
+        
         <Button 
           variant="ghost"
           size="sm"
@@ -85,7 +133,7 @@ export default function TopMenuBar({ onToggleTestRunner, onRunSimulation }: TopM
           <span>Run</span>
         </Button>
         <Button 
-          className="bg-orange-600 hover:bg-orange-700 text-white flex items-center space-x-2"
+          className="bg-red-600 hover:bg-red-700 text-white flex items-center space-x-2"
           size="sm"
           data-testid="button-stop"
         >

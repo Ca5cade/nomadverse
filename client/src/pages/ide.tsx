@@ -9,6 +9,11 @@ import SimulationViewport from "@/components/ide/SimulationViewport";
 import ConsolePanel from "@/components/ide/ConsolePanel";
 import TestRunner from "@/components/ide/TestRunner";
 import { useProjects } from "@/hooks/use-projects";
+import { 
+  ResizablePanelGroup, 
+  ResizablePanel, 
+  ResizableHandle 
+} from "@/components/ui/resizable";
 
 export type ActiveTab = 'visual' | 'python' | '3d';
 
@@ -17,6 +22,9 @@ export default function IDE() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [showTestRunner, setShowTestRunner] = useState(false);
   const [simulationTrigger, setSimulationTrigger] = useState(0);
+  const [showFileExplorer, setShowFileExplorer] = useState(true);
+  const [showBlockPalette, setShowBlockPalette] = useState(true);
+  const [showConsole, setShowConsole] = useState(true);
   const { data: projects, isLoading } = useProjects();
 
   // Select first project by default
@@ -37,60 +45,98 @@ export default function IDE() {
       <TopMenuBar 
         onToggleTestRunner={() => setShowTestRunner(!showTestRunner)}
         onRunSimulation={() => setSimulationTrigger(prev => prev + 1)}
+        onToggleFileExplorer={() => setShowFileExplorer(!showFileExplorer)}
+        onToggleBlockPalette={() => setShowBlockPalette(!showBlockPalette)}
+        onToggleConsole={() => setShowConsole(!showConsole)}
+        showFileExplorer={showFileExplorer}
+        showBlockPalette={showBlockPalette}
+        showConsole={showConsole}
       />
       
-      <div className="flex-1 flex overflow-hidden">
-        <FileExplorer 
-          selectedProject={selectedProject}
-          onSelectProject={setSelectedProject}
-        />
-        
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
-          
-          <div className="flex-1 flex overflow-hidden">
-            {activeTab === 'visual' && (
+      <ResizablePanelGroup direction="vertical" className="flex-1">
+        <ResizablePanel defaultSize={85}>
+          <ResizablePanelGroup direction="horizontal" className="flex-1">
+            {showFileExplorer && (
               <>
-                <div className="flex-1 bg-editor-bg relative overflow-hidden">
-                  <BlockPalette />
-                  <BlockCanvas project={currentProject} />
-                </div>
-                <CodeEditor project={currentProject} />
-                <SimulationViewport 
-                  project={currentProject}
-                  blocks={currentProject?.blocks as any[] || []}
-                  runTrigger={simulationTrigger}
-                />
+                <ResizablePanel defaultSize={15} minSize={10}>
+                  <FileExplorer 
+                    selectedProject={selectedProject}
+                    onSelectProject={setSelectedProject}
+                  />
+                </ResizablePanel>
+                <ResizableHandle />
               </>
             )}
             
-            {activeTab === 'python' && (
-              <>
-                <div className="flex-1">
-                  <CodeEditor project={currentProject} fullWidth />
+            <ResizablePanel defaultSize={showFileExplorer ? 85 : 100}>
+              <div className="flex flex-col h-full">
+                <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+                
+                <div className="flex-1 overflow-hidden">
+                  {activeTab === 'visual' && (
+                    <ResizablePanelGroup direction="horizontal" className="h-full">
+                      <ResizablePanel defaultSize={showBlockPalette ? 45 : 60} minSize={30}>
+                        <div className="h-full bg-editor-bg relative overflow-hidden">
+                          {showBlockPalette && <BlockPalette />}
+                          <BlockCanvas project={currentProject} />
+                        </div>
+                      </ResizablePanel>
+                      <ResizableHandle />
+                      <ResizablePanel defaultSize={30} minSize={20}>
+                        <CodeEditor project={currentProject} />
+                      </ResizablePanel>
+                      <ResizableHandle />
+                      <ResizablePanel defaultSize={25} minSize={20}>
+                        <SimulationViewport 
+                          project={currentProject}
+                          blocks={currentProject?.blocks as any[] || []}
+                          runTrigger={simulationTrigger}
+                        />
+                      </ResizablePanel>
+                    </ResizablePanelGroup>
+                  )}
+                  
+                  {activeTab === 'python' && (
+                    <ResizablePanelGroup direction="horizontal" className="h-full">
+                      <ResizablePanel defaultSize={70} minSize={50}>
+                        <CodeEditor project={currentProject} fullWidth />
+                      </ResizablePanel>
+                      <ResizableHandle />
+                      <ResizablePanel defaultSize={30} minSize={25}>
+                        <SimulationViewport 
+                          project={currentProject}
+                          blocks={currentProject?.blocks as any[] || []}
+                          runTrigger={simulationTrigger}
+                        />
+                      </ResizablePanel>
+                    </ResizablePanelGroup>
+                  )}
+                  
+                  {activeTab === '3d' && (
+                    <div className="h-full">
+                      <SimulationViewport 
+                        project={currentProject}
+                        blocks={currentProject?.blocks as any[] || []}
+                        runTrigger={simulationTrigger}
+                        fullWidth={true}
+                      />
+                    </div>
+                  )}
                 </div>
-                <SimulationViewport 
-                  project={currentProject}
-                  blocks={currentProject?.blocks as any[] || []}
-                  runTrigger={simulationTrigger}
-                />
-              </>
-            )}
-            
-            {activeTab === '3d' && (
-              <div className="flex-1">
-                <SimulationViewport 
-                  project={currentProject}
-                  blocks={currentProject?.blocks as any[] || []}
-                  fullWidth={true}
-                />
               </div>
-            )}
-          </div>
-        </main>
-      </div>
-      
-      {showTestRunner ? <TestRunner /> : <ConsolePanel />}
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </ResizablePanel>
+        
+        {showConsole && (
+          <>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={15} minSize={10}>
+              {showTestRunner ? <TestRunner /> : <ConsolePanel />}
+            </ResizablePanel>
+          </>
+        )}
+      </ResizablePanelGroup>
     </div>
   );
 }

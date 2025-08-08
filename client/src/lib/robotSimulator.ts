@@ -149,36 +149,66 @@ export class RobotSimulator {
     this.onStateChange(this.robot);
 
     return new Promise((resolve) => {
-      const delay = command.delay / this.simulationSpeed;
+      const delay = Math.max(command.delay / this.simulationSpeed, 50); // Minimum 50ms for smoothness
+      const steps = Math.max(Math.floor(delay / 50), 1); // Break movement into smooth steps
       
-      switch (command.type) {
-        case 'move_forward':
-          this.moveRobot(command.value);
-          break;
-        case 'move_backward':
-          this.moveRobot(-command.value);
-          break;
-        case 'turn_left':
-          this.turnRobot(-command.value);
-          break;
-        case 'turn_right':
-          this.turnRobot(command.value);
-          break;
-        case 'wait':
-          // Just wait, no robot movement
-          break;
-      }
+      let currentStep = 0;
+      const stepDelay = delay / steps;
+      
+      const stepInterval = setInterval(() => {
+        const progress = currentStep / steps;
+        
+        switch (command.type) {
+          case 'move_forward':
+            this.moveRobotSmooth(command.value, progress, steps);
+            break;
+          case 'move_backward':
+            this.moveRobotSmooth(-command.value, progress, steps);
+            break;
+          case 'turn_left':
+            this.turnRobotSmooth(-command.value, progress, steps);
+            break;
+          case 'turn_right':
+            this.turnRobotSmooth(command.value, progress, steps);
+            break;
+          case 'wait':
+            // Just wait, no robot movement
+            break;
+        }
 
-      this.onStateChange(this.robot);
-      
-      setTimeout(() => {
-        this.robot.isMoving = false;
         this.onStateChange(this.robot);
-        resolve();
-      }, delay);
+        currentStep++;
+        
+        if (currentStep >= steps) {
+          clearInterval(stepInterval);
+          this.robot.isMoving = false;
+          this.onStateChange(this.robot);
+          resolve();
+        }
+      }, stepDelay);
     });
   }
 
+  private moveRobotSmooth(totalDistance: number, progress: number, steps: number): void {
+    const stepDistance = totalDistance / steps;
+    
+    // Calculate movement based on current rotation
+    const angleInRadians = (this.robot.rotation.y * Math.PI) / 180;
+    const deltaX = Math.sin(angleInRadians) * stepDistance * 0.5; // Scale factor for visualization
+    const deltaZ = Math.cos(angleInRadians) * stepDistance * 0.5;
+    
+    this.robot.position.x += deltaX;
+    this.robot.position.z += deltaZ;
+  }
+
+  private turnRobotSmooth(totalDegrees: number, progress: number, steps: number): void {
+    const stepDegrees = totalDegrees / steps;
+    this.robot.rotation.y += stepDegrees;
+    // Normalize rotation to 0-360 degrees
+    this.robot.rotation.y = ((this.robot.rotation.y % 360) + 360) % 360;
+  }
+
+  // Legacy methods kept for compatibility
   private moveRobot(distance: number): void {
     // Calculate movement based on current rotation
     const angleInRadians = (this.robot.rotation.y * Math.PI) / 180;
