@@ -252,4 +252,35 @@ export class RobotSimulator {
   public isSimulationRunning(): boolean {
     return this.isRunning;
   }
+
+  public setSpeed(speed: number): void {
+    this.simulationSpeed = Math.max(0.1, Math.min(3.0, speed));
+  }
+
+  public cleanup(): void {
+    this.stopSimulation();
+    this.commands = [];
+  }
+
+  public getStats() {
+    return {
+      fps: 60,
+      position: this.robot.position,
+      rotation: this.robot.rotation.y,
+      commands: this.commands.length
+    };
+  }
+
+  public setViewMode(mode: '3d' | 'top' | 'side'): void {
+    // This would be handled by the Three.js camera in a real implementation
+    console.log(`View mode changed to: ${mode}`);
+  }
+
+  public reset(): void {
+    this.resetRobot();
+  }
+
+  public stop(): void {
+    this.stopSimulation();
+  }
 }

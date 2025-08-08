@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, FolderOpen, FileCode, Puzzle, Box, Folder, Circle, Settings, TestTube } from "lucide-react";
-import { useProjects, useCreateProject } from "@/hooks/use-projects";
-import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { FolderPlus, FileText, Plus, Search, ChevronDown, ChevronRight, Folder, FolderOpen } from "lucide-react";
+import { useProjects } from "@/hooks/use-projects";
 import { useToast } from "@/hooks/use-toast";
 
 interface FileExplorerProps {
@@ -11,149 +11,143 @@ interface FileExplorerProps {
 }
 
 export default function FileExplorer({ selectedProject, onSelectProject }: FileExplorerProps) {
-  const { data: projects } = useProjects();
-  const { mutate: createProject } = useCreateProject();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['projects']));
+  const { data: projects, createProject } = useProjects();
   const { toast } = useToast();
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
-  const toggleProjectExpansion = (projectId: string) => {
-    const newExpanded = new Set(expandedProjects);
-    if (newExpanded.has(projectId)) {
-      newExpanded.delete(projectId);
-    } else {
-      newExpanded.add(projectId);
+  const handleCreateProject = async () => {
+    try {
+      const newProject = await createProject.mutateAsync({
+        name: `Project ${(projects?.length || 0) + 1}`,
+        blocks: [],
+        generatedCode: ""
+      });
+      onSelectProject(newProject.id);
+      toast({
+        title: "Success",
+        description: "New project created successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create project",
+        variant: "destructive",
+      });
     }
-    setExpandedProjects(newExpanded);
   };
 
-  const getFileIcon = (filename: string) => {
-    if (filename.endsWith('.py')) return <FileCode className="w-3 h-3 text-accent-blue" />;
-    if (filename.endsWith('.scratch')) return <Puzzle className="w-3 h-3 text-green-400" />;
-    if (filename.endsWith('.world')) return <Box className="w-3 h-3 text-purple-400" />;
-    return <FileCode className="w-3 h-3 text-text-secondary" />;
+  const toggleFolder = (folderId: string) => {
+    const newExpanded = new Set(expandedFolders);
+    if (newExpanded.has(folderId)) {
+      newExpanded.delete(folderId);
+    } else {
+      newExpanded.add(folderId);
+    }
+    setExpandedFolders(newExpanded);
   };
 
-  const handleNewProject = () => {
-    const projectName = `Robot Project ${(projects?.length || 0) + 1}`;
-    createProject({
-      name: projectName,
-      description: "A new robot programming project",
-      blocks: [],
-      pythonCode: "",
-      sceneConfig: {
-        objects: [
-          {
-            id: "robot-1",
-            type: "robot" as const,
-            position: { x: 0, y: 0, z: 0 },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 },
-            color: "#3B82F6"
-          }
-        ],
-        environment: {
-          lighting: "default",
-          gravity: 9.8
-        }
-      }
-    }, {
-      onSuccess: () => {
-        toast({
-          title: "Project created",
-          description: `${projectName} has been created successfully`,
-        });
-      }
-    });
-  };
+  const filteredProjects = projects?.filter(project => 
+    project.name.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
   return (
-    <aside className="w-64 bg-panel-bg border-r border-border-color flex flex-col">
-      <div className="border-b border-border-color p-3">
-        <h3 className="text-sm font-semibold mb-2 text-text-primary">Project Explorer</h3>
-        <div className="flex space-x-1">
-          <Button 
-            size="sm" 
-            className="flex-1 bg-accent-blue hover:bg-blue-700 text-white"
-            onClick={handleNewProject}
+    <div className="h-full bg-gradient-to-b from-panel-bg to-panel-hover border-r border-border-color shadow-premium flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b border-border-color bg-gradient-to-r from-panel-hover to-panel-active">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-text-primary flex items-center space-x-2">
+            <FolderOpen className="w-4 h-4 text-accent-blue" />
+            <span>Explorer</span>
+          </h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCreateProject}
+            className="h-7 w-7 p-0 hover:bg-accent-blue/10 hover:text-accent-blue transition-all hover:scale-110"
+            title="New Project"
             data-testid="button-new-project"
           >
-            <Plus className="w-3 h-3 mr-1" />
-            New
+            <Plus className="w-3.5 h-3.5" />
           </Button>
-          <Button 
-            size="sm" 
-            variant="secondary"
-            className="flex-1 bg-border-color hover:bg-gray-600 text-text-primary"
-            data-testid="button-open-project"
-          >
-            <FolderOpen className="w-3 h-3 mr-1" />
-            Open
-          </Button>
+        </div>
+        
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
+          <Input
+            placeholder="Search projects..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8 h-8 bg-panel-bg border-border-color focus:border-accent-blue text-sm transition-all"
+          />
         </div>
       </div>
 
-      <div className="flex-1 p-3 overflow-y-auto">
-        <div className="space-y-1">
-          {projects?.map((project) => (
-            <div key={project.id}>
-              <div 
-                className={cn(
-                  "flex items-center space-x-2 p-1 hover:bg-border-color rounded cursor-pointer text-sm",
-                  selectedProject === project.id && "bg-border-color"
-                )}
-                onClick={() => {
-                  onSelectProject(project.id);
-                  toggleProjectExpansion(project.id);
-                }}
+      {/* File Tree */}
+      <div className="flex-1 overflow-y-auto p-2">
+        {/* Projects Folder */}
+        <div className="mb-1">
+          <Button
+            variant="ghost"
+            className="w-full justify-start h-7 px-2 hover:bg-panel-active text-text-secondary hover:text-text-primary transition-all"
+            onClick={() => toggleFolder('projects')}
+          >
+            {expandedFolders.has('projects') ? (
+              <ChevronDown className="w-3.5 h-3.5 mr-1" />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 mr-1" />
+            )}
+            <Folder className="w-3.5 h-3.5 mr-2 text-accent-blue" />
+            <span className="text-sm font-medium">Projects</span>
+          </Button>
+        </div>
+
+        {/* Project Files */}
+        {expandedFolders.has('projects') && (
+          <div className="ml-4 space-y-0.5">
+            {filteredProjects.map((project) => (
+              <Button
+                key={project.id}
+                variant="ghost"
+                className={`w-full justify-start h-7 px-2 text-sm transition-all hover:scale-105 ${
+                  selectedProject === project.id
+                    ? 'bg-accent-blue/15 text-accent-blue border-l-2 border-accent-blue shadow-sm'
+                    : 'hover:bg-panel-active text-text-secondary hover:text-text-primary'
+                }`}
+                onClick={() => onSelectProject(project.id)}
                 data-testid={`project-${project.id}`}
               >
-                <Folder className="w-3 h-3 text-yellow-400" />
-                <span className="text-text-primary">{project.name}</span>
-              </div>
-              
-              {expandedProjects.has(project.id) && (
-                <div className="ml-4 space-y-1 mt-1">
-                  <div className="flex items-center space-x-2 p-1 hover:bg-border-color rounded cursor-pointer text-sm">
-                    {getFileIcon("main.py")}
-                    <span className="text-text-primary">main.py</span>
-                  </div>
-                  <div className="flex items-center space-x-2 p-1 hover:bg-border-color rounded cursor-pointer text-sm">
-                    {getFileIcon("blocks.scratch")}
-                    <span className="text-text-primary">blocks.scratch</span>
-                  </div>
-                  <div className="flex items-center space-x-2 p-1 hover:bg-border-color rounded cursor-pointer text-sm">
-                    {getFileIcon("scene.world")}
-                    <span className="text-text-primary">scene.world</span>
-                  </div>
-                  <div className="flex items-center space-x-2 p-1 hover:bg-border-color rounded cursor-pointer text-sm">
-                    <TestTube className="w-3 h-3 text-purple-400" />
-                    <span className="text-text-primary">tests.py</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+                <FileText className="w-3.5 h-3.5 mr-2" />
+                <span className="truncate">{project.name}</span>
+              </Button>
+            ))}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {filteredProjects.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <FolderPlus className="w-8 h-8 text-text-muted mb-2" />
+            <p className="text-sm text-text-muted mb-2">No projects found</p>
+            <Button
+              size="sm"
+              onClick={handleCreateProject}
+              className="bg-accent-blue hover:bg-accent-blue-hover text-white shadow-md hover:shadow-lg transition-all"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Create Project
+            </Button>
+          </div>
+        )}
       </div>
 
-      <div className="border-t border-border-color p-3 space-y-2">
-        <div className="flex items-center justify-between text-xs text-text-secondary">
-          <span>Simulation</span>
-          <div className="flex items-center space-x-1">
-            <Circle className="w-2 h-2 bg-green-400 rounded-full" />
-            <span>Ready</span>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start text-text-secondary hover:text-text-primary"
-          data-testid="button-simulation-settings"
-        >
-          <Settings className="w-3 h-3 mr-2" />
-          <span className="text-xs">Settings</span>
-        </Button>
+      {/* Footer */}
+      <div className="p-3 border-t border-border-color bg-panel-bg">
+        <p className="text-xs text-text-muted text-center">
+          {projects?.length || 0} project{(projects?.length || 0) !== 1 ? 's' : ''}
+        </p>
       </div>
-    </aside>
+    </div>
   );
 }

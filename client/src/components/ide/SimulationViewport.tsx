@@ -1,257 +1,259 @@
-import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Home, Maximize, Play, Pause, Square } from "lucide-react";
-import { initializeThreeScene, updateRobotPosition, updateRobotRotation } from "@/lib/threeUtils";
-import { RobotSimulator, type RobotState } from "@/lib/robotSimulator";
-import type { Project } from "@shared/schema";
-import { Block } from "@shared/schema";
+import { useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Play, Pause, Square, RotateCcw, Settings, Maximize2, Camera, Zap } from 'lucide-react';
+import { RobotSimulator } from '@/lib/robotSimulator';
+import { Slider } from '@/components/ui/slider';
 
 interface SimulationViewportProps {
-  project?: Project;
-  fullWidth?: boolean;
-  blocks?: Block[];
-  onRun?: () => void;
-  runTrigger?: number;
+  isRunning: boolean;
+  onToggleSimulation: () => void;
+  onStopSimulation: () => void;
+  generatedCode: string;
 }
 
-export default function SimulationViewport({ project, fullWidth = false, blocks = [], onRun, runTrigger }: SimulationViewportProps) {
+export default function SimulationViewport({
+  isRunning,
+  onToggleSimulation,
+  onStopSimulation,
+  generatedCode
+}: SimulationViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const sceneRef = useRef<any>(null);
   const simulatorRef = useRef<RobotSimulator | null>(null);
-  const [isRunning, setIsRunning] = useState(false);
-  const [robotState, setRobotState] = useState<RobotState>({
-    position: { x: 0, y: 0, z: 0 },
-    rotation: { x: 0, y: 0, z: 0 },
-    isMoving: false,
-    speed: 1.0
-  });
+  const [speed, setSpeed] = useState([1]);
   const [stats, setStats] = useState({
     fps: 60,
-    objects: 3,
-    time: 0,
+    position: { x: 0, y: 0, z: 0 },
+    rotation: 0,
+    commands: 0
   });
-  
-  const [simulationSpeed, setSimulationSpeed] = useState(1.0);
+  const [viewMode, setViewMode] = useState<'3d' | 'top' | 'side'>('3d');
 
   useEffect(() => {
-    if (canvasRef.current && !sceneRef.current) {
-      sceneRef.current = initializeThreeScene(canvasRef.current);
-      
-      // Initialize robot simulator
+    if (canvasRef.current) {
       simulatorRef.current = new RobotSimulator(
-        (state: RobotState) => {
-          setRobotState(state);
-          if (sceneRef.current) {
-            updateRobotPosition(sceneRef.current, state.position);
-            updateRobotRotation(sceneRef.current, state.rotation);
-          }
+        (state) => {
+          setStats(prev => ({
+            ...prev,
+            position: state.position,
+            rotation: state.rotation.y
+          }));
         },
         (command) => {
-          console.log('Command completed:', command.type, command.value);
+          setStats(prev => ({
+            ...prev,
+            commands: prev.commands + 1
+          }));
         }
       );
-    }
+      
+      const updateStats = () => {
+        if (simulatorRef.current) {
+          const robotStats = simulatorRef.current.getStats();
+          setStats(robotStats);
+        }
+      };
 
-    return () => {
-      if (sceneRef.current) {
-        sceneRef.current.dispose();
-        sceneRef.current = null;
-      }
-      simulatorRef.current = null;
-    };
+      const interval = setInterval(updateStats, 100);
+      return () => {
+        clearInterval(interval);
+        if (simulatorRef.current) {
+          simulatorRef.current.cleanup();
+        }
+      };
+    }
   }, []);
 
   useEffect(() => {
-    if (project?.sceneConfig && sceneRef.current) {
-      // Update scene with project configuration
-      console.log('Updating scene with config:', project.sceneConfig);
-    }
-  }, [project?.sceneConfig]);
-
-  const handlePlay = async () => {
-    if (!simulatorRef.current || isRunning) return;
-    
-    setIsRunning(true);
-    setStats(prev => ({ ...prev, time: 0 }));
-    
-    // Generate commands from current blocks
-    const commands = simulatorRef.current.generateCommandsFromBlocks(blocks);
-    console.log('Generated commands:', commands);
-    
-    // Execute simulation
-    const startTime = Date.now();
-    const timer = setInterval(() => {
-      setStats(prev => ({ ...prev, time: (Date.now() - startTime) / 1000 }));
-    }, 100);
-    
-    try {
-      await simulatorRef.current.executeCommands(commands);
-    } catch (error) {
-      console.error('Simulation error:', error);
-    }
-    
-    clearInterval(timer);
-    setIsRunning(false);
-    
-    if (onRun) {
-      onRun();
-    }
-  };
-
-  const handlePause = () => {
     if (simulatorRef.current) {
-      simulatorRef.current.stopSimulation();
+      simulatorRef.current.setSpeed(speed[0]);
     }
-    setIsRunning(false);
-  };
+  }, [speed]);
 
   const handleReset = () => {
-    setIsRunning(false);
-    setStats(prev => ({ ...prev, time: 0 }));
-    
     if (simulatorRef.current) {
-      simulatorRef.current.resetRobot();
+      simulatorRef.current.reset();
+      setStats(prev => ({ ...prev, position: { x: 0, y: 0, z: 0 }, rotation: 0, commands: 0 }));
     }
   };
 
-  const handleResetView = () => {
-    if (sceneRef.current) {
-      sceneRef.current.resetCamera();
-    }
-  };
-
-  // Update simulation speed
-  useEffect(() => {
+  const handleViewChange = (mode: '3d' | 'top' | 'side') => {
+    setViewMode(mode);
     if (simulatorRef.current) {
-      simulatorRef.current.setSimulationSpeed(simulationSpeed);
-    }
-  }, [simulationSpeed]);
-
-  // Handle external run trigger
-  useEffect(() => {
-    if (runTrigger && runTrigger > 0) {
-      handlePlay();
-    }
-  }, [runTrigger]);
-
-  const handleFullscreen = () => {
-    if (canvasRef.current) {
-      canvasRef.current.requestFullscreen();
+      simulatorRef.current.setViewMode(mode);
     }
   };
 
   return (
-    <div className={`bg-black border-l border-border-color flex flex-col ${fullWidth ? 'flex-1' : 'w-96'}`}>
-      <div className="bg-panel-bg px-4 py-2 border-b border-border-color flex items-center justify-between">
-        <span className="text-sm font-medium text-text-primary">3D Simulation</span>
-        <div className="flex space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-text-secondary hover:text-text-primary"
-            onClick={handleResetView}
-            data-testid="button-reset-view"
-          >
-            <Home className="w-3 h-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-text-secondary hover:text-text-primary"
-            onClick={handleFullscreen}
-            data-testid="button-fullscreen"
-          >
-            <Maximize className="w-3 h-3" />
-          </Button>
+    <div className="h-full bg-gradient-to-br from-panel-bg via-panel-hover to-panel-bg border-l border-border-color shadow-premium flex flex-col relative overflow-hidden">
+      {/* Header */}
+      <div className="p-4 border-b border-border-color bg-gradient-to-r from-panel-hover to-panel-active backdrop-blur-sm">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-text-primary flex items-center space-x-2">
+            <div className="p-1.5 rounded-lg bg-gradient-to-br from-accent-green to-accent-purple shadow-sm">
+              <Camera className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span>3D Simulation</span>
+            <span className="text-xs text-text-muted bg-panel-bg px-2 py-0.5 rounded-full">
+              {isRunning ? 'Running' : 'Stopped'}
+            </span>
+          </h3>
+          
+          <div className="flex items-center space-x-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              className="h-7 w-7 p-0 hover:bg-orange-500/10 hover:text-orange-400 transition-all hover:scale-110"
+              title="Reset Simulation"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 hover:bg-accent-blue/10 hover:text-accent-blue transition-all hover:scale-110"
+              title="Settings"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 hover:bg-accent-purple/10 hover:text-accent-purple transition-all hover:scale-110"
+              title="Fullscreen"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            {!isRunning ? (
+              <Button
+                size="sm"
+                onClick={onToggleSimulation}
+                className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white flex items-center space-x-2 shadow-md hover:shadow-lg transition-all hover:scale-105 font-semibold px-4"
+              >
+                <Play className="w-3.5 h-3.5" />
+                <span>Run</span>
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={onToggleSimulation}
+                className="bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white flex items-center space-x-2 shadow-md hover:shadow-lg transition-all hover:scale-105 font-semibold px-4"
+              >
+                <Pause className="w-3.5 h-3.5" />
+                <span>Pause</span>
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={onStopSimulation}
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white flex items-center space-x-2 shadow-md hover:shadow-lg transition-all hover:scale-105 font-semibold px-4"
+            >
+              <Square className="w-3.5 h-3.5" />
+              <span>Stop</span>
+            </Button>
+          </div>
+          
+          {/* View Mode Selector */}
+          <div className="flex items-center space-x-1 bg-panel-bg rounded-lg p-1 border border-border-color">
+            {[
+              { mode: '3d' as const, label: '3D' },
+              { mode: 'top' as const, label: 'Top' },
+              { mode: 'side' as const, label: 'Side' }
+            ].map(({ mode, label }) => (
+              <Button
+                key={mode}
+                variant="ghost"
+                size="sm"
+                className={`h-6 px-3 text-xs transition-all ${
+                  viewMode === mode
+                    ? 'bg-accent-blue text-white shadow-sm'
+                    : 'hover:bg-panel-hover text-text-secondary hover:text-text-primary'
+                }`}
+                onClick={() => handleViewChange(mode)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
         </div>
       </div>
-      
-      <div className="flex-1 relative">
+
+      {/* Canvas */}
+      <div className="flex-1 relative bg-gradient-to-br from-gray-900 to-gray-800 overflow-hidden">
         <canvas
           ref={canvasRef}
-          className="absolute inset-0 w-full h-full"
-          data-testid="simulation-canvas"
+          className="w-full h-full"
+          style={{ background: 'radial-gradient(circle at center, #1a1a2e 0%, #16213e 50%, #0f172a 100%)' }}
         />
-
-        {/* Simulation Controls */}
-        <div className="absolute bottom-4 left-4 flex space-x-2">
-          <Button
-            size="sm"
-            className="bg-green-600 hover:bg-green-700 text-white"
-            onClick={handlePlay}
-            disabled={isRunning}
-            data-testid="button-play-simulation"
-          >
-            <Play className="w-3 h-3" />
-          </Button>
-          <Button
-            size="sm"
-            className="bg-gray-600 hover:bg-gray-700 text-white"
-            onClick={handlePause}
-            disabled={!isRunning}
-            data-testid="button-pause-simulation"
-          >
-            <Pause className="w-3 h-3" />
-          </Button>
-          <Button
-            size="sm"
-            className="bg-red-600 hover:bg-red-700 text-white"
-            onClick={handleReset}
-            data-testid="button-reset-simulation"
-          >
-            <Square className="w-3 h-3" />
-          </Button>
-        </div>
-
-        {/* Simulation Stats */}
-        <div 
-          className="absolute top-4 right-4 bg-black bg-opacity-70 rounded p-3 text-xs space-y-2"
-          data-testid="simulation-stats"
-        >
-          <div className="flex justify-between">
-            <span className="text-text-secondary">FPS:</span>
-            <span className="text-green-400">{stats.fps}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-text-secondary">Objects:</span>
-            <span className="text-text-primary">{stats.objects}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-text-secondary">Time:</span>
-            <span className="text-text-primary">{stats.time.toFixed(1)}s</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-text-secondary">Speed:</span>
-            <div className="flex items-center space-x-1">
-              <input 
-                type="range" 
-                min="0.1" 
-                max="3.0" 
-                step="0.1" 
-                value={simulationSpeed}
-                onChange={(e) => setSimulationSpeed(parseFloat(e.target.value))}
-                className="w-12 h-1"
-                data-testid="simulation-speed-slider"
-              />
-              <span className="text-text-primary w-8">{simulationSpeed.toFixed(1)}x</span>
+        
+        {/* Overlay Stats */}
+        <div className="absolute top-4 right-4 bg-panel-bg/90 backdrop-blur-sm border border-border-color rounded-lg p-3 shadow-lg">
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center justify-between space-x-4">
+              <span className="text-text-muted">FPS:</span>
+              <span className="text-text-primary font-mono">{stats.fps}</span>
+            </div>
+            <div className="flex items-center justify-between space-x-4">
+              <span className="text-text-muted">Position:</span>
+              <span className="text-text-primary font-mono">
+                ({stats.position.x.toFixed(1)}, {stats.position.y.toFixed(1)}, {stats.position.z.toFixed(1)})
+              </span>
+            </div>
+            <div className="flex items-center justify-between space-x-4">
+              <span className="text-text-muted">Rotation:</span>
+              <span className="text-text-primary font-mono">{stats.rotation.toFixed(1)}°</span>
+            </div>
+            <div className="flex items-center justify-between space-x-4">
+              <span className="text-text-muted">Commands:</span>
+              <span className="text-text-primary font-mono">{stats.commands}</span>
             </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-text-secondary">Status:</span>
-            <span className={isRunning ? "text-green-400" : robotState.isMoving ? "text-blue-400" : "text-orange-400"}>
-              {isRunning ? "Running" : robotState.isMoving ? "Moving" : "Ready"}
-            </span>
+        </div>
+
+        {/* Speed Control */}
+        <div className="absolute bottom-4 left-4 bg-panel-bg/90 backdrop-blur-sm border border-border-color rounded-lg p-3 shadow-lg">
+          <div className="flex items-center space-x-3 text-xs">
+            <Zap className="w-3.5 h-3.5 text-accent-yellow" />
+            <span className="text-text-muted">Speed:</span>
+            <div className="w-20">
+              <Slider
+                value={speed}
+                onValueChange={setSpeed}
+                max={3}
+                min={0.1}
+                step={0.1}
+                className="w-full"
+              />
+            </div>
+            <span className="text-text-primary font-mono w-8">{speed[0].toFixed(1)}x</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-text-secondary">Position:</span>
-            <span className="text-text-primary">
-              ({robotState.position.x.toFixed(1)}, {robotState.position.z.toFixed(1)})
-            </span>
+        </div>
+
+        {/* Loading Overlay */}
+        {!simulatorRef.current && (
+          <div className="absolute inset-0 flex items-center justify-center bg-panel-bg/50 backdrop-blur-sm">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-accent-blue border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+              <p className="text-sm text-text-muted">Initializing 3D simulation...</p>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-text-secondary">Angle:</span>
-            <span className="text-text-primary">{robotState.rotation.y.toFixed(0)}°</span>
-          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="p-3 border-t border-border-color bg-panel-bg flex items-center justify-between">
+        <p className="text-xs text-text-muted">
+          Advanced 3D Simulation Engine v2.0
+        </p>
+        <div className="flex items-center space-x-2 text-xs text-text-muted">
+          <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}></div>
+          <span>{isRunning ? 'Simulating' : 'Ready'}</span>
         </div>
       </div>
     </div>
