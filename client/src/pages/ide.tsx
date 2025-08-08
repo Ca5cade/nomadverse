@@ -16,6 +16,7 @@ export default function IDE() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('visual');
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [showTestRunner, setShowTestRunner] = useState(false);
+  const [simulationTrigger, setSimulationTrigger] = useState(0);
   const { data: projects, isLoading } = useProjects();
 
   // Select first project by default
@@ -33,7 +34,10 @@ export default function IDE() {
 
   return (
     <div className="h-screen flex flex-col bg-editor-bg text-text-primary font-interface overflow-hidden">
-      <TopMenuBar onToggleTestRunner={() => setShowTestRunner(!showTestRunner)} />
+      <TopMenuBar 
+        onToggleTestRunner={() => setShowTestRunner(!showTestRunner)}
+        onRunSimulation={() => setSimulationTrigger(prev => prev + 1)}
+      />
       
       <div className="flex-1 flex overflow-hidden">
         <FileExplorer 
@@ -52,7 +56,11 @@ export default function IDE() {
                   <BlockCanvas project={currentProject} />
                 </div>
                 <CodeEditor project={currentProject} />
-                <SimulationViewport project={currentProject} />
+                <SimulationViewport 
+                  project={currentProject}
+                  blocks={currentProject?.blocks as any[] || []}
+                  runTrigger={simulationTrigger}
+                />
               </>
             )}
             
@@ -61,13 +69,21 @@ export default function IDE() {
                 <div className="flex-1">
                   <CodeEditor project={currentProject} fullWidth />
                 </div>
-                <SimulationViewport project={currentProject} />
+                <SimulationViewport 
+                  project={currentProject}
+                  blocks={currentProject?.blocks as any[] || []}
+                  runTrigger={simulationTrigger}
+                />
               </>
             )}
             
             {activeTab === '3d' && (
               <div className="flex-1">
-                <SimulationViewport project={currentProject} fullWidth />
+                <SimulationViewport 
+                  project={currentProject}
+                  blocks={currentProject?.blocks as any[] || []}
+                  fullWidth={true}
+                />
               </div>
             )}
           </div>

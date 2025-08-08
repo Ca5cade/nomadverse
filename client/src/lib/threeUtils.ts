@@ -158,6 +158,14 @@ export function updateRobotPosition(threeScene: ThreeScene, position: { x: numbe
   threeScene.robot.position.set(position.x, position.y, position.z);
 }
 
+export function updateRobotRotation(threeScene: ThreeScene, rotation: { x: number; y: number; z: number }): void {
+  threeScene.robot.rotation.set(
+    (rotation.x * Math.PI) / 180,
+    (rotation.y * Math.PI) / 180, 
+    (rotation.z * Math.PI) / 180
+  );
+}
+
 export function animateRobotMovement(
   threeScene: ThreeScene, 
   targetPosition: { x: number; y: number; z: number },

@@ -1,22 +1,34 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Home, Maximize, Play, Pause, Square } from "lucide-react";
-import { initializeThreeScene, updateRobotPosition } from "@/lib/threeUtils";
+import { initializeThreeScene, updateRobotPosition, updateRobotRotation } from "@/lib/threeUtils";
+import { RobotSimulator, type RobotState } from "@/lib/robotSimulator";
 import type { Project } from "@shared/schema";
+import { Block } from "@shared/schema";
 
 interface SimulationViewportProps {
   project?: Project;
   fullWidth?: boolean;
+  blocks?: Block[];
+  onRun?: () => void;
+  runTrigger?: number;
 }
 
-export default function SimulationViewport({ project, fullWidth = false }: SimulationViewportProps) {
+export default function SimulationViewport({ project, fullWidth = false, blocks = [], onRun, runTrigger }: SimulationViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<any>(null);
+  const simulatorRef = useRef<RobotSimulator | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [robotState, setRobotState] = useState<RobotState>({
+    position: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    isMoving: false,
+    speed: 1.0
+  });
   const [stats, setStats] = useState({
     fps: 60,
     objects: 3,
-    time: 2.5,
+    time: 0,
   });
   
   const [simulationSpeed, setSimulationSpeed] = useState(1.0);
@@ -24,6 +36,20 @@ export default function SimulationViewport({ project, fullWidth = false }: Simul
   useEffect(() => {
     if (canvasRef.current && !sceneRef.current) {
       sceneRef.current = initializeThreeScene(canvasRef.current);
+      
+      // Initialize robot simulator
+      simulatorRef.current = new RobotSimulator(
+        (state: RobotState) => {
+          setRobotState(state);
+          if (sceneRef.current) {
+            updateRobotPosition(sceneRef.current, state.position);
+            updateRobotRotation(sceneRef.current, state.rotation);
+          }
+        },
+        (command) => {
+          console.log('Command completed:', command.type, command.value);
+        }
+      );
     }
 
     return () => {
@@ -31,6 +57,7 @@ export default function SimulationViewport({ project, fullWidth = false }: Simul
         sceneRef.current.dispose();
         sceneRef.current = null;
       }
+      simulatorRef.current = null;
     };
   }, []);
 
@@ -41,31 +68,71 @@ export default function SimulationViewport({ project, fullWidth = false }: Simul
     }
   }, [project?.sceneConfig]);
 
-  const handlePlay = () => {
+  const handlePlay = async () => {
+    if (!simulatorRef.current || isRunning) return;
+    
     setIsRunning(true);
-    // Start simulation
+    setStats(prev => ({ ...prev, time: 0 }));
+    
+    // Generate commands from current blocks
+    const commands = simulatorRef.current.generateCommandsFromBlocks(blocks);
+    console.log('Generated commands:', commands);
+    
+    // Execute simulation
+    const startTime = Date.now();
+    const timer = setInterval(() => {
+      setStats(prev => ({ ...prev, time: (Date.now() - startTime) / 1000 }));
+    }, 100);
+    
+    try {
+      await simulatorRef.current.executeCommands(commands);
+    } catch (error) {
+      console.error('Simulation error:', error);
+    }
+    
+    clearInterval(timer);
+    setIsRunning(false);
+    
+    if (onRun) {
+      onRun();
+    }
   };
 
   const handlePause = () => {
+    if (simulatorRef.current) {
+      simulatorRef.current.stopSimulation();
+    }
     setIsRunning(false);
-    // Pause simulation
   };
 
   const handleReset = () => {
     setIsRunning(false);
     setStats(prev => ({ ...prev, time: 0 }));
-    // Reset simulation
-    if (sceneRef.current) {
-      updateRobotPosition(sceneRef.current, { x: 0, y: 0, z: 0 });
+    
+    if (simulatorRef.current) {
+      simulatorRef.current.resetRobot();
     }
   };
 
   const handleResetView = () => {
     if (sceneRef.current) {
-      // Reset camera position
       sceneRef.current.resetCamera();
     }
   };
+
+  // Update simulation speed
+  useEffect(() => {
+    if (simulatorRef.current) {
+      simulatorRef.current.setSimulationSpeed(simulationSpeed);
+    }
+  }, [simulationSpeed]);
+
+  // Handle external run trigger
+  useEffect(() => {
+    if (runTrigger && runTrigger > 0) {
+      handlePlay();
+    }
+  }, [runTrigger]);
 
   const handleFullscreen = () => {
     if (canvasRef.current) {
@@ -171,9 +238,19 @@ export default function SimulationViewport({ project, fullWidth = false }: Simul
           </div>
           <div className="flex justify-between">
             <span className="text-text-secondary">Status:</span>
-            <span className={isRunning ? "text-green-400" : "text-orange-400"}>
-              {isRunning ? "Running" : "Paused"}
+            <span className={isRunning ? "text-green-400" : robotState.isMoving ? "text-blue-400" : "text-orange-400"}>
+              {isRunning ? "Running" : robotState.isMoving ? "Moving" : "Ready"}
             </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-text-secondary">Position:</span>
+            <span className="text-text-primary">
+              ({robotState.position.x.toFixed(1)}, {robotState.position.z.toFixed(1)})
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-text-secondary">Angle:</span>
+            <span className="text-text-primary">{robotState.rotation.y.toFixed(0)}°</span>
           </div>
         </div>
       </div>

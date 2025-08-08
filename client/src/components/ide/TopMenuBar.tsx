@@ -3,9 +3,10 @@ import { Play, Square, Bot, Save, Download, Upload, Zap } from "lucide-react";
 
 interface TopMenuBarProps {
   onToggleTestRunner?: () => void;
+  onRunSimulation?: () => void;
 }
 
-export default function TopMenuBar({ onToggleTestRunner }: TopMenuBarProps) {
+export default function TopMenuBar({ onToggleTestRunner, onRunSimulation }: TopMenuBarProps) {
   return (
     <header className="bg-panel-bg border-b border-border-color px-4 py-2 flex items-center justify-between">
       <div className="flex items-center space-x-4">
@@ -77,6 +78,7 @@ export default function TopMenuBar({ onToggleTestRunner }: TopMenuBarProps) {
         <Button 
           className="bg-green-600 hover:bg-green-700 text-white flex items-center space-x-2"
           size="sm"
+          onClick={onRunSimulation}
           data-testid="button-run"
         >
           <Play className="w-3 h-3" />
