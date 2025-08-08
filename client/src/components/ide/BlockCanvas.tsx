@@ -53,6 +53,13 @@ export default function BlockCanvas({ project }: BlockCanvasProps) {
     },
   ]);
 
+  // Load blocks from project on mount
+  useEffect(() => {
+    if (project?.blocks && Array.isArray(project.blocks) && project.blocks.length > 0) {
+      setBlocks(project.blocks as CanvasBlock[]);
+    }
+  }, [project?.id]); // Only run when project changes
+
   // Auto-save blocks and generated code when blocks change
   useEffect(() => {
     if (project && blocks.length > 0) {
@@ -65,7 +72,7 @@ export default function BlockCanvas({ project }: BlockCanvasProps) {
         } 
       });
     }
-  }, [blocks, project, updateProject]);
+  }, [blocks, project?.id, updateProject]); // Don't include project itself to avoid loops
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -156,10 +163,10 @@ export default function BlockCanvas({ project }: BlockCanvasProps) {
     return (
       <div
         key={block.id}
-        className={`absolute ${getBlockColor(block.category)} p-3 rounded-lg shadow-lg cursor-grab flex items-center space-x-3 min-w-32 ${
-          block.isDragging ? 'opacity-50' : ''
+        className={`absolute ${getBlockColor(block.category)} p-3 rounded-lg shadow-lg cursor-grab flex items-center space-x-2 min-w-32 hover:scale-105 transition-transform ${
+          block.isDragging ? 'opacity-50 scale-110' : ''
         }`}
-        style={{ left: block.x, top: block.y }}
+        style={{ left: block.x, top: block.y, zIndex: block.isDragging ? 1000 : 1 }}
         draggable
         onDragStart={(e) => handleBlockDragStart(e, block.id)}
         data-testid={`canvas-block-${block.id}`}
@@ -168,23 +175,22 @@ export default function BlockCanvas({ project }: BlockCanvasProps) {
         <span className="text-white text-sm font-medium">{config.label}</span>
         
         {config.inputs?.map((input) => (
-          <input
-            key={input.name}
-            type={input.type}
-            className="bg-black bg-opacity-20 text-white border-none rounded px-2 py-1 w-12 text-xs text-center"
-            value={block.inputs?.[input.name] || input.defaultValue || ''}
-            onChange={(e) => updateBlockInput(block.id, input.name, 
-              input.type === 'number' ? Number(e.target.value) : e.target.value
+          <div key={input.name} className="flex items-center space-x-1">
+            <input
+              type={input.type === 'number' ? 'number' : 'text'}
+              className="bg-black bg-opacity-30 text-white border border-white border-opacity-20 rounded px-2 py-1 w-16 text-xs text-center focus:bg-opacity-50 focus:outline-none"
+              value={block.inputs?.[input.name] || input.defaultValue || ''}
+              onChange={(e) => updateBlockInput(block.id, input.name, 
+                input.type === 'number' ? Number(e.target.value) || 0 : e.target.value
+              )}
+              placeholder={input.defaultValue?.toString()}
+              data-testid={`input-${block.id}-${input.name}`}
+              onClick={(e) => e.stopPropagation()}
+            />
+            {input.label && (
+              <span className="text-white text-xs opacity-90">{input.label}</span>
             )}
-            placeholder={input.defaultValue?.toString()}
-            data-testid={`input-${block.id}-${input.name}`}
-          />
-        ))}
-        
-        {config.inputs?.map((input) => (
-          <span key={`${input.name}-label`} className="text-white text-sm">
-            {input.label}
-          </span>
+          </div>
         ))}
       </div>
     );
@@ -193,17 +199,39 @@ export default function BlockCanvas({ project }: BlockCanvasProps) {
   return (
     <div 
       ref={canvasRef}
-      className="ml-64 h-full bg-gray-800 p-4 overflow-auto relative"
+      className="h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black p-4 overflow-auto relative"
       onDrop={handleBlockDrop}
       onDragOver={handleDragOver}
       data-testid="block-canvas"
     >
-      {/* Grid Background */}
-      <div className="absolute inset-0 grid-bg opacity-10 pointer-events-none" />
+      {/* Enhanced Grid Background */}
+      <div 
+        className="absolute inset-0 opacity-10 pointer-events-none"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: '20px 20px'
+        }}
+      />
+      
+      {/* Drop Zone Indicator */}
+      <div className="absolute inset-4 border-2 border-dashed border-gray-600 opacity-20 rounded-lg pointer-events-none" />
       
       {/* Blocks */}
-      <div className="relative z-10">
+      <div className="relative z-10 min-h-full">
         {blocks.map(renderBlock)}
+        
+        {/* Helper Text */}
+        {blocks.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-gray-400 text-center">
+              <p className="text-lg mb-2">Drop blocks here to start programming</p>
+              <p className="text-sm opacity-75">Drag blocks from the palette to create your robot program</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

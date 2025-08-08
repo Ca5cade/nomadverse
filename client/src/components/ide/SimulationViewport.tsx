@@ -5,18 +5,19 @@ import { RobotSimulator } from '@/lib/robotSimulator';
 import { Slider } from '@/components/ui/slider';
 
 interface SimulationViewportProps {
-  isRunning: boolean;
-  onToggleSimulation: () => void;
-  onStopSimulation: () => void;
-  generatedCode: string;
+  project?: any;
+  blocks?: any[];
+  runTrigger?: number;
+  fullWidth?: boolean;
 }
 
 export default function SimulationViewport({
-  isRunning,
-  onToggleSimulation,
-  onStopSimulation,
-  generatedCode
+  project,
+  blocks = [],
+  runTrigger = 0,
+  fullWidth = false
 }: SimulationViewportProps) {
+  const [isRunning, setIsRunning] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const simulatorRef = useRef<RobotSimulator | null>(null);
   const [speed, setSpeed] = useState([1]);
@@ -68,6 +69,14 @@ export default function SimulationViewport({
       simulatorRef.current.setSpeed(speed[0]);
     }
   }, [speed]);
+
+  // Run simulation when trigger changes
+  useEffect(() => {
+    if (runTrigger > 0 && simulatorRef.current && blocks.length > 0) {
+      setIsRunning(true);
+      simulatorRef.current.executeCommands(simulatorRef.current.generateCommandsFromBlocks(blocks));
+    }
+  }, [runTrigger, blocks]);
 
   const handleReset = () => {
     if (simulatorRef.current) {
@@ -133,7 +142,7 @@ export default function SimulationViewport({
             {!isRunning ? (
               <Button
                 size="sm"
-                onClick={onToggleSimulation}
+                onClick={() => setIsRunning(true)}
                 className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white flex items-center space-x-2 shadow-md hover:shadow-lg transition-all hover:scale-105 font-semibold px-4"
               >
                 <Play className="w-3.5 h-3.5" />
@@ -142,7 +151,7 @@ export default function SimulationViewport({
             ) : (
               <Button
                 size="sm"
-                onClick={onToggleSimulation}
+                onClick={() => setIsRunning(false)}
                 className="bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white flex items-center space-x-2 shadow-md hover:shadow-lg transition-all hover:scale-105 font-semibold px-4"
               >
                 <Pause className="w-3.5 h-3.5" />
@@ -151,7 +160,12 @@ export default function SimulationViewport({
             )}
             <Button
               size="sm"
-              onClick={onStopSimulation}
+              onClick={() => {
+                setIsRunning(false);
+                if (simulatorRef.current) {
+                  simulatorRef.current.stop();
+                }
+              }}
               className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white flex items-center space-x-2 shadow-md hover:shadow-lg transition-all hover:scale-105 font-semibold px-4"
             >
               <Square className="w-3.5 h-3.5" />

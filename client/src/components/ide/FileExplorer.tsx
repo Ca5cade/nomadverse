@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FolderPlus, FileText, Plus, Search, ChevronDown, ChevronRight, Folder, FolderOpen } from "lucide-react";
-import { useProjects } from "@/hooks/use-projects";
+import { useProjects, useCreateProject } from "@/hooks/use-projects";
 import { useToast } from "@/hooks/use-toast";
 
 interface FileExplorerProps {
@@ -13,7 +13,8 @@ interface FileExplorerProps {
 export default function FileExplorer({ selectedProject, onSelectProject }: FileExplorerProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['projects']));
-  const { data: projects, createProject } = useProjects();
+  const { data: projects } = useProjects();
+  const createProject = useCreateProject();
   const { toast } = useToast();
 
   const handleCreateProject = async () => {
@@ -21,7 +22,7 @@ export default function FileExplorer({ selectedProject, onSelectProject }: FileE
       const newProject = await createProject.mutateAsync({
         name: `Project ${(projects?.length || 0) + 1}`,
         blocks: [],
-        generatedCode: ""
+        pythonCode: "# Generated from visual blocks\nimport robot\nimport time\n\ndef main():\n    pass\n\nif __name__ == \"__main__\":\n    main()"
       });
       onSelectProject(newProject.id);
       toast({
