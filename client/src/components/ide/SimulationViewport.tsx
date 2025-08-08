@@ -30,37 +30,42 @@ export default function SimulationViewport({
   const [viewMode, setViewMode] = useState<'3d' | 'top' | 'side'>('3d');
 
   useEffect(() => {
-    if (canvasRef.current) {
-      simulatorRef.current = new RobotSimulator(
-        (state) => {
-          setStats(prev => ({
-            ...prev,
-            position: state.position,
-            rotation: state.rotation.y
-          }));
-        },
-        (command) => {
-          setStats(prev => ({
-            ...prev,
-            commands: prev.commands + 1
-          }));
-        }
-      );
-      
-      const updateStats = () => {
-        if (simulatorRef.current) {
-          const robotStats = simulatorRef.current.getStats();
-          setStats(robotStats);
-        }
-      };
+    if (canvasRef.current && !simulatorRef.current) {
+      try {
+        simulatorRef.current = new RobotSimulator(
+          canvasRef.current,
+          (state) => {
+            setStats(prev => ({
+              ...prev,
+              position: state.position,
+              rotation: state.rotation.y
+            }));
+          },
+          (command) => {
+            setStats(prev => ({
+              ...prev,
+              commands: prev.commands + 1
+            }));
+          }
+        );
+        
+        const updateStats = () => {
+          if (simulatorRef.current) {
+            const robotStats = simulatorRef.current.getStats();
+            setStats(robotStats);
+          }
+        };
 
-      const interval = setInterval(updateStats, 100);
-      return () => {
-        clearInterval(interval);
-        if (simulatorRef.current) {
-          simulatorRef.current.cleanup();
-        }
-      };
+        const interval = setInterval(updateStats, 100);
+        return () => {
+          clearInterval(interval);
+          if (simulatorRef.current) {
+            simulatorRef.current.cleanup();
+          }
+        };
+      } catch (error) {
+        console.error('Failed to initialize 3D simulator:', error);
+      }
     }
   }, []);
 
