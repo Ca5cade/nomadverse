@@ -176,6 +176,25 @@ export default function SimulationViewport({
               <Square className="w-3.5 h-3.5" />
               <span>Stop</span>
             </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setIsRunning(false);
+                if (simulatorRef.current) {
+                  simulatorRef.current.reset();
+                }
+                setStats({
+                  fps: 60,
+                  position: { x: 0, y: 0, z: 0 },
+                  rotation: 0,
+                  commands: 0
+                });
+              }}
+              className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white flex items-center space-x-2 shadow-md hover:shadow-lg transition-all hover:scale-105 font-semibold px-4"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset</span>
+            </Button>
           </div>
           
           {/* View Mode Selector */}
