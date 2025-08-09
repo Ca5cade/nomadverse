@@ -277,31 +277,21 @@ if __name__ == "__main__":
           </div>
         </div>
 
-        <div className="flex-1 p-4 bg-editor-bg">
-          <div className="h-full flex flex-col">
-            <div className="mb-4">
-              <h3 className="text-xl font-semibold text-text-primary mb-2">
-                Review Your Robot Program
-              </h3>
-              <p className="text-text-secondary">
-                {programmingMode === 'visual' 
-                  ? 'This Python code was automatically generated from your visual blocks. Review it before running the simulation.'
-                  : 'Review your Python code before running the simulation.'
-                }
-              </p>
-            </div>
+        <div className="flex-1 flex flex-col bg-editor-bg">
+          <div className="px-6 py-2 bg-panel-bg border-b border-border-color">
+            <h3 className="text-lg font-semibold text-text-primary mb-1">
+              Review Your Robot Program
+            </h3>
+            <p className="text-sm text-text-secondary">
+              {programmingMode === 'visual' 
+                ? 'Generated from visual blocks - review before simulation'
+                : 'Review your Python code before simulation'
+              }
+            </p>
+          </div>
 
-            <div className="bg-panel-bg border border-border-color rounded-lg overflow-hidden flex-1">
-              <div className="p-3 h-full flex flex-col">
-                <h4 className="text-sm font-medium text-text-primary mb-3 flex items-center">
-                  <Code className="w-4 h-4 mr-2" />
-                  Generated Python Code ({codeToShow.split('\n').length} lines)
-                </h4>
-                <div className="flex-1 min-h-0">
-                  <CodeEditor project={currentProject} readOnly={true} code={codeToShow} fullWidth={true} />
-                </div>
-              </div>
-            </div>
+          <div className="flex-1 min-h-0">
+            <CodeEditor project={currentProject} readOnly={true} code={codeToShow} fullWidth={true} />
           </div>
         </div>
       </div>
