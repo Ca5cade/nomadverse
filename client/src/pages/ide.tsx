@@ -249,7 +249,7 @@ export default function IDE() {
             </div>
 
             <div className="bg-panel-bg border border-border-color rounded-lg overflow-hidden">
-              <CodeEditor project={currentProject} readOnly />
+              <CodeEditor project={currentProject} readOnly={true} />
             </div>
           </div>
         </div>

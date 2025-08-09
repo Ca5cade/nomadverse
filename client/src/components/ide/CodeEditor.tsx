@@ -3,33 +3,38 @@ import { Button } from "@/components/ui/button";
 import { Copy, Download, Play, Eye, EyeOff } from "lucide-react";
 import type { Project } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { generatePythonCode } from "@/lib/codeGenerator";
 
 interface CodeEditorProps {
   project?: Project;
   fullWidth?: boolean;
+  readOnly?: boolean;
 }
 
-export default function CodeEditor({ project, fullWidth = false }: CodeEditorProps) {
+export default function CodeEditor({ project, fullWidth = false, readOnly = false }: CodeEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const [isReadOnly, setIsReadOnly] = useState(true);
-  const [code, setCode] = useState(`# Generated from visual blocks
+  const [isReadOnly, setIsReadOnly] = useState(readOnly);
+  const [code, setCode] = useState("");
+
+  // Generate code from project blocks when project changes
+  useEffect(() => {
+    if (project?.blocks && project.blocks.length > 0) {
+      const generatedCode = generatePythonCode(project.blocks);
+      setCode(generatedCode);
+    } else {
+      setCode(`# Generated from visual blocks
 import robot
 import time
 
 def main():
-    robot.move_forward(10)
-    for i in range(5):
-        robot.turn_right(90)
+    # No blocks to execute
+    pass
 
 if __name__ == "__main__":
     main()`);
-
-  useEffect(() => {
-    if (project?.pythonCode) {
-      setCode(project.pythonCode);
     }
-  }, [project?.pythonCode]);
+  }, [project?.blocks]);
 
   const handleCopyCode = async () => {
     try {
@@ -105,10 +110,10 @@ if __name__ == "__main__":
           )}
         </div>
       </div>
-      
+
       <div className="flex-1 relative">
         {isReadOnly ? (
-          <div 
+          <div
             ref={editorRef}
             className="absolute inset-0 p-4 overflow-auto font-code text-sm"
             data-testid="code-editor"
