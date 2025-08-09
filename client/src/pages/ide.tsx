@@ -1,11 +1,11 @@
-
 import { useState } from "react";
 import TopMenuBar from "@/components/ide/TopMenuBar";
 import FileExplorer from "@/components/ide/FileExplorer";
-import { useProjects } from "@/hooks/use-projects";
+import { useProjects, useUpdateProject } from '@/hooks/use-projects';
+import { Block } from '@shared/schema';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Code2, Puzzle, Play, ArrowRight, ArrowLeft, CheckCircle } from "lucide-react";
+import { Code2, Puzzle, Play, ArrowRight, ArrowLeft, CheckCircle, Code } from "lucide-react";
 import BlockPalette from "@/components/ide/BlockPalette";
 import BlockCanvas from "@/components/ide/BlockCanvas";
 import CodeEditor from "@/components/ide/CodeEditor";
@@ -17,6 +17,7 @@ import {
   ResizablePanel, 
   ResizableHandle 
 } from "@/components/ui/resizable";
+import { generateCodeFromBlocks } from '@/lib/codeGenerator';
 
 export type ProgrammingMode = 'visual' | 'python';
 export type WorkflowStep = 'select-mode' | 'programming' | 'code-review' | 'simulation';
@@ -30,6 +31,7 @@ export default function IDE() {
   const [showFileExplorer, setShowFileExplorer] = useState(true);
   const [showConsole, setShowConsole] = useState(true);
   const { data: projects, isLoading } = useProjects();
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
 
   // Select first project by default
   if (!selectedProject && projects && projects.length > 0) {
@@ -37,6 +39,7 @@ export default function IDE() {
   }
 
   const currentProject = projects?.find(p => p.id === selectedProject);
+  const blocks = currentProject?.blocks || [];
 
   if (isLoading) {
     return <div className="h-screen bg-editor-bg flex items-center justify-center text-text-primary">
@@ -60,7 +63,7 @@ export default function IDE() {
         const isActive = workflowStep === step.key;
         const isCompleted = ['select-mode', 'programming', 'code-review', 'simulation'].indexOf(workflowStep) > index;
         const Icon = step.icon;
-        
+
         return (
           <div key={step.key} className="flex items-center">
             <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
@@ -89,7 +92,7 @@ export default function IDE() {
             Choose your programming approach to get started
           </p>
         </div>
-        
+
         <div className="grid md:grid-cols-2 gap-8">
           <Card className="bg-panel-bg border-border-color hover:border-accent-blue transition-all hover:scale-105 cursor-pointer group"
                 onClick={() => handleModeSelection('visual')}>
@@ -155,7 +158,12 @@ export default function IDE() {
           </Button>
           <Button 
             size="sm"
-            onClick={() => setWorkflowStep('code-review')}
+            onClick={() => {
+              setWorkflowStep('code-review');
+              if (programmingMode === 'visual' && blocks) {
+                setGeneratedCode(generateCodeFromBlocks(blocks));
+              }
+            }}
             className="bg-accent-blue hover:bg-accent-blue-hover text-white"
           >
             Next: Review Code
@@ -176,7 +184,7 @@ export default function IDE() {
             <ResizableHandle />
           </>
         )}
-        
+
         <ResizablePanel defaultSize={showFileExplorer ? 85 : 100}>
           {programmingMode === 'visual' ? (
             <ResizablePanelGroup direction="horizontal" className="h-full">
@@ -196,54 +204,58 @@ export default function IDE() {
     </div>
   );
 
-  const renderCodeReviewStep = () => (
-    <div className="flex-1 flex flex-col">
-      <div className="flex items-center justify-between px-6 py-3 bg-panel-bg border-b border-border-color">
-        <h2 className="text-lg font-semibold text-text-primary">
-          Generated Python Code Review
-        </h2>
-        <div className="flex space-x-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setWorkflowStep('programming')}
-            className="border-border-color hover:bg-panel-active"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Editor
-          </Button>
-          <Button 
-            size="sm"
-            onClick={() => setWorkflowStep('simulation')}
-            className="bg-accent-green hover:bg-accent-green/80 text-white"
-          >
-            Run Simulation
-            <Play className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
-      </div>
+  const renderCodeReviewStep = () => {
+    const codeToShow = generatedCode || generateCodeFromBlocks(blocks);
 
-      <div className="flex-1 p-6 bg-editor-bg">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-6">
-            <h3 className="text-xl font-semibold text-text-primary mb-2">
-              Review Your Robot Program
-            </h3>
-            <p className="text-text-secondary">
-              {programmingMode === 'visual' 
-                ? 'This Python code was automatically generated from your visual blocks. Review it before running the simulation.'
-                : 'Review your Python code before running the simulation.'
-              }
-            </p>
+    return (
+      <div className="flex-1 flex flex-col">
+        <div className="flex items-center justify-between px-6 py-3 bg-panel-bg border-b border-border-color">
+          <h2 className="text-lg font-semibold text-text-primary">
+            Generated Python Code
+          </h2>
+          <div className="flex space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setWorkflowStep('programming')}
+              className="border-border-color hover:bg-panel-active"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Editor
+            </Button>
+            <Button 
+              size="sm"
+              onClick={() => setWorkflowStep('simulation')}
+              className="bg-accent-green hover:bg-accent-green/80 text-white"
+            >
+              Run Simulation
+              <Play className="w-4 h-4 ml-2" />
+            </Button>
           </div>
-          
-          <div className="bg-panel-bg border border-border-color rounded-lg overflow-hidden">
-            <CodeEditor project={currentProject} readOnly />
+        </div>
+
+        <div className="flex-1 p-6 bg-editor-bg">
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-text-primary mb-2">
+                Review Your Robot Program
+              </h3>
+              <p className="text-text-secondary">
+                {programmingMode === 'visual' 
+                  ? 'This Python code was automatically generated from your visual blocks. Review it before running the simulation.'
+                  : 'Review your Python code before running the simulation.'
+                }
+              </p>
+            </div>
+
+            <div className="bg-panel-bg border border-border-color rounded-lg overflow-hidden">
+              <CodeEditor project={currentProject} readOnly />
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderSimulationStep = () => (
     <div className="flex-1 flex flex-col">
@@ -281,7 +293,7 @@ export default function IDE() {
             fullWidth={true}
           />
         </ResizablePanel>
-        
+
         {showConsole && (
           <>
             <ResizableHandle />
@@ -306,9 +318,9 @@ export default function IDE() {
         showBlockPalette={true}
         showConsole={showConsole}
       />
-      
+
       {workflowStep !== 'select-mode' && renderStepIndicator()}
-      
+
       {workflowStep === 'select-mode' && renderModeSelection()}
       {workflowStep === 'programming' && renderProgrammingStep()}
       {workflowStep === 'code-review' && renderCodeReviewStep()}

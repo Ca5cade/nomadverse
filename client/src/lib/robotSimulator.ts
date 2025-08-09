@@ -16,7 +16,7 @@ export interface SimulationCommand {
 }
 
 export class RobotSimulator {
-  private canvas: HTMLCanvasElement;
+  private container: HTMLElement;
   private scene!: THREE.Scene;
   private camera!: THREE.PerspectiveCamera;
   private renderer!: THREE.WebGLRenderer;
@@ -33,11 +33,11 @@ export class RobotSimulator {
   private simulationSpeed: number = 1.0;
 
   constructor(
-    canvas: HTMLCanvasElement,
+    container: HTMLElement,
     onStateChange: (state: RobotState) => void,
     onCommandComplete?: (command: SimulationCommand) => void
   ) {
-    this.canvas = canvas;
+    this.container = container;
     this.robotState = {
       position: { x: 0, y: 0, z: 0 },
       rotation: { x: 0, y: 0, z: 0 },
@@ -59,8 +59,8 @@ export class RobotSimulator {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x1a1a2e);
 
-    const width = this.canvas.clientWidth;
-    const height = this.canvas.clientHeight;
+    const width = this.container.clientWidth;
+    const height = this.container.clientHeight;
 
     this.camera = new THREE.PerspectiveCamera(
       75,
@@ -72,7 +72,6 @@ export class RobotSimulator {
     this.camera.lookAt(0, 0, 0);
 
     this.renderer = new THREE.WebGLRenderer({
-      canvas: this.canvas,
       antialias: true,
       alpha: true
     });
@@ -80,6 +79,9 @@ export class RobotSimulator {
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // Append the renderer's canvas to the container
+    this.container.appendChild(this.renderer.domElement);
 
     // Initialize OrbitControls for smoother camera interaction
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -180,9 +182,9 @@ export class RobotSimulator {
 
   private handleResize = () => {
     const resizeObserver = new ResizeObserver(() => {
-      if (this.canvas) {
-        const width = this.canvas.clientWidth;
-        const height = this.canvas.clientHeight;
+      if (this.container) {
+        const width = this.container.clientWidth;
+        const height = this.container.clientHeight;
 
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
@@ -192,7 +194,7 @@ export class RobotSimulator {
       }
     });
 
-    resizeObserver.observe(this.canvas);
+    resizeObserver.observe(this.container);
   }
 
   public generateCommandsFromBlocks(blocks: Block[]): SimulationCommand[] {
@@ -358,6 +360,12 @@ export class RobotSimulator {
       isMoving: false,
       speed: this.simulationSpeed,
     };
+    this.onStateChange(this.robotState);
+  }
+
+  public pause(): void {
+    this.isRunning = false;
+    this.robotState.isMoving = false;
     this.onStateChange(this.robotState);
   }
 
