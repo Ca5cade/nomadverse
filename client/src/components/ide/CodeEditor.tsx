@@ -89,109 +89,140 @@ if __name__ == "__main__":
   }
 
   return (
-    <div className={`bg-editor-bg border-l border-border-color flex flex-col ${fullWidth ? 'flex-1' : 'w-96'}`}>
-      <div className="bg-panel-bg px-4 py-2 border-b border-border-color flex items-center justify-between">
-        <span className="text-sm font-medium text-text-primary">
-          {fullWidth ? "Python Editor" : "Generated Python"}
-        </span>
-        <div className="flex space-x-2">
+    <div className={`bg-editor-bg ${fullWidth ? 'flex-1' : 'w-96 border-l border-border-color'} flex flex-col`}>
+      <div className="bg-panel-bg px-4 py-3 border-b border-border-color flex items-center justify-between shrink-0">
+        <div className="flex items-center space-x-3">
+          <span className="text-sm font-medium text-text-primary">
+            {fullWidth ? "Python Code Editor" : "Generated Python"}
+          </span>
+          {code && (
+            <span className="text-xs text-text-secondary bg-panel-active px-2 py-1 rounded">
+              {code.split('\n').length} lines
+            </span>
+          )}
+        </div>
+        <div className="flex items-center space-x-1">
           <Button
             variant="ghost"
             size="sm"
-            className="text-text-secondary hover:text-text-primary"
+            className="text-text-secondary hover:text-text-primary hover:bg-panel-active"
             onClick={() => setIsReadOnly(!isReadOnly)}
             data-testid="button-toggle-edit"
+            title={isReadOnly ? "Enable editing" : "View only"}
           >
-            {isReadOnly ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+            {isReadOnly ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className="text-text-secondary hover:text-text-primary"
+            className="text-text-secondary hover:text-text-primary hover:bg-panel-active"
             onClick={handleCopyCode}
             data-testid="button-copy-code"
+            title="Copy code"
           >
-            <Copy className="w-3 h-3" />
+            <Copy className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className="text-text-secondary hover:text-text-primary"
+            className="text-text-secondary hover:text-text-primary hover:bg-panel-active"
             onClick={handleExportCode}
             data-testid="button-export-code"
+            title="Download as Python file"
           >
-            <Download className="w-3 h-3" />
+            <Download className="w-4 h-4" />
           </Button>
           {fullWidth && (
             <Button
               variant="ghost"
               size="sm"
-              className="text-green-400 hover:text-green-300"
+              className="text-accent-green hover:text-white hover:bg-accent-green"
               data-testid="button-run-code"
+              title="Run code"
             >
-              <Play className="w-3 h-3" />
+              <Play className="w-4 h-4" />
             </Button>
           )}
         </div>
       </div>
 
-      <div className="flex-1 relative bg-gray-900">
+      <div className="flex-1 relative bg-gray-900 min-h-0">
         {isReadOnly ? (
           <div
             ref={editorRef}
-            className="absolute inset-0 p-4 overflow-auto font-mono text-sm bg-gray-900 text-white"
+            className="absolute inset-0 p-6 overflow-auto font-mono text-sm bg-gray-900 text-white"
             data-testid="code-editor"
+            style={{ lineHeight: '1.6' }}
           >
             <pre className="text-white leading-relaxed whitespace-pre-wrap">
-              {code.split('\n').map((line, index) => (
-                <div key={index} className="min-h-[1.25rem] flex">
-                  <span className="text-gray-400 w-8 text-right mr-4 select-none">
-                    {index + 1}
-                  </span>
-                  <div className="flex-1">
-                    {line.split(' ').map((word, wordIndex) => {
-                      // Enhanced syntax highlighting
-                      if (['import', 'def', 'for', 'if', 'in', 'range', 'while', 'elif', 'else', 'try', 'except', 'finally', 'with', 'as', 'return'].includes(word)) {
-                        return <span key={wordIndex} className="text-purple-400">{word} </span>;
-                      }
-                      if (['robot', 'time', '__name__', '__main__'].includes(word)) {
-                        return <span key={wordIndex} className="text-blue-400">{word} </span>;
-                      }
-                      if (['main', 'move_forward', 'move_backward', 'turn_left', 'turn_right', 'sleep'].includes(word.replace(/[(),:]/g, ''))) {
-                        return <span key={wordIndex} className="text-yellow-400">{word} </span>;
-                      }
-                      if (word.match(/^\d+$/)) {
-                        return <span key={wordIndex} className="text-green-400">{word} </span>;
-                      }
-                      if (word.startsWith('"') || word.startsWith("'")) {
-                        return <span key={wordIndex} className="text-green-300">{word} </span>;
-                      }
-                      if (word.startsWith('#')) {
-                        return <span key={wordIndex} className="text-gray-500">{word} </span>;
-                      }
-                      return <span key={wordIndex} className="text-white">{word} </span>;
-                    })}
+              {code.split('\n').map((line, index) => {
+                const isCommentLine = line.trim().startsWith('#');
+                const isDocstringLine = line.trim().startsWith('"""') || line.trim().startsWith("'''");
+                const isEmpty = line.trim() === '';
+                
+                return (
+                  <div key={index} className={`min-h-[1.6rem] flex ${isEmpty ? 'opacity-50' : ''}`}>
+                    <span className="text-gray-500 w-12 text-right mr-4 select-none text-xs">
+                      {index + 1}
+                    </span>
+                    <div className="flex-1">
+                      {isCommentLine || isDocstringLine ? (
+                        <span className="text-green-400 italic">{line}</span>
+                      ) : (
+                        line.split(' ').map((word, wordIndex) => {
+                          // Enhanced syntax highlighting with more keywords
+                          if (['import', 'from', 'def', 'class', 'for', 'if', 'in', 'range', 'while', 'elif', 'else', 'try', 'except', 'finally', 'with', 'as', 'return', 'yield', 'break', 'continue', 'pass', 'lambda', 'and', 'or', 'not', 'is', 'None', 'True', 'False'].includes(word.replace(/[(),:]/g, ''))) {
+                            return <span key={wordIndex} className="text-purple-400 font-medium">{word} </span>;
+                          }
+                          if (['self', 'cls', '__init__', '__name__', '__main__', 'robot', 'time', 'math', 'print'].includes(word.replace(/[(),:]/g, ''))) {
+                            return <span key={wordIndex} className="text-blue-400">{word} </span>;
+                          }
+                          if (['move_forward', 'move_backward', 'turn_left', 'turn_right', 'stop', 'set_speed', 'sleep', 'execute_program', 'main'].includes(word.replace(/[(),:]/g, ''))) {
+                            return <span key={wordIndex} className="text-yellow-400">{word} </span>;
+                          }
+                          if (word.match(/^\d+(\.\d+)?$/)) {
+                            return <span key={wordIndex} className="text-orange-400">{word} </span>;
+                          }
+                          if (word.startsWith('"') && word.endsWith('"') || word.startsWith("'") && word.endsWith("'")) {
+                            return <span key={wordIndex} className="text-green-300">{word} </span>;
+                          }
+                          if (word.startsWith('"""') || word.startsWith("'''")) {
+                            return <span key={wordIndex} className="text-green-400 italic">{word} </span>;
+                          }
+                          if (word.startsWith('#')) {
+                            return <span key={wordIndex} className="text-gray-500 italic">{word} </span>;
+                          }
+                          if (['RobotController', 'Exception', 'KeyboardInterrupt'].includes(word.replace(/[(),:]/g, ''))) {
+                            return <span key={wordIndex} className="text-cyan-400">{word} </span>;
+                          }
+                          return <span key={wordIndex} className="text-gray-100">{word} </span>;
+                        })
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </pre>
           </div>
         ) : (
           <textarea
-            className="absolute inset-0 p-4 w-full h-full bg-gray-900 text-white font-mono text-sm resize-none border-none outline-none"
+            className="absolute inset-0 p-6 w-full h-full bg-gray-900 text-white font-mono text-sm resize-none border-none outline-none leading-relaxed"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             placeholder="Edit Python code here..."
             data-testid="code-editor-textarea"
+            style={{ lineHeight: '1.6' }}
           />
         )}
         {!code && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <p className="text-gray-400 mb-2">No code to display. Create some blocks to generate code.</p>
-              <p className="text-xs text-gray-500">
-                Debug: providedCode={providedCode ? 'present' : 'null'}, 
-                project blocks={project?.blocks?.length || 0}
+              <div className="w-16 h-16 bg-panel-bg rounded-full flex items-center justify-center mx-auto mb-4">
+                <Code className="w-8 h-8 text-text-muted" />
+              </div>
+              <p className="text-text-secondary mb-2">No code to display</p>
+              <p className="text-xs text-text-muted">
+                Create some blocks in Visual Programming mode to generate code
               </p>
             </div>
           </div>

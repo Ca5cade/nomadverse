@@ -217,45 +217,139 @@ export default function IDE() {
       console.error("Code generation error:", error);
     }
     
-    // If no code was generated or generation failed, use a default template
+    // If no code was generated or generation failed, use a well-structured default template
     if (!codeToShow || codeToShow.trim() === "") {
-      codeToShow = `# Robot Program Generated
-# This code was automatically generated from your visual blocks
+      codeToShow = `"""
+Robot Control Program
+Generated from Visual Programming Blocks
+
+This program demonstrates basic robot movement and control.
+Customize the robot's behavior by modifying the functions below.
+"""
 
 import robot
 import time
+import math
+
+class RobotController:
+    """Main robot controller class"""
+    
+    def __init__(self):
+        """Initialize the robot controller"""
+        self.speed = 1.0
+        self.position = {"x": 0, "y": 0}
+        self.heading = 0
+        
+    def set_speed(self, speed):
+        """Set robot movement speed (0.1 to 2.0)"""
+        self.speed = max(0.1, min(2.0, speed))
+        robot.set_speed(self.speed)
+        
+    def move_forward(self, duration=1.0):
+        """Move robot forward for specified duration"""
+        print(f"Moving forward for {duration} seconds at speed {self.speed}")
+        robot.move_forward()
+        time.sleep(duration)
+        robot.stop()
+        
+    def move_backward(self, duration=1.0):
+        """Move robot backward for specified duration"""
+        print(f"Moving backward for {duration} seconds")
+        robot.move_backward()
+        time.sleep(duration)
+        robot.stop()
+        
+    def turn_left(self, angle=90):
+        """Turn robot left by specified angle in degrees"""
+        print(f"Turning left {angle} degrees")
+        turn_time = angle / 90.0  # Approximate turning time
+        robot.turn_left()
+        time.sleep(turn_time)
+        robot.stop()
+        self.heading = (self.heading - angle) % 360
+        
+    def turn_right(self, angle=90):
+        """Turn robot right by specified angle in degrees"""
+        print(f"Turning right {angle} degrees")
+        turn_time = angle / 90.0  # Approximate turning time
+        robot.turn_right()
+        time.sleep(turn_time)
+        robot.stop()
+        self.heading = (self.heading + angle) % 360
+        
+    def execute_program(self):
+        """Main program execution"""
+        print("🤖 Starting Robot Program...")
+        print("=" * 40)
+        
+        # Set initial speed
+        self.set_speed(1.2)
+        
+        # Execute movement sequence
+        print("Phase 1: Forward movement")
+        self.move_forward(2.0)
+        
+        print("Phase 2: Navigation turn")
+        self.turn_right(90)
+        
+        print("Phase 3: Secondary movement")
+        self.move_forward(1.5)
+        
+        print("Phase 4: Return positioning")
+        self.turn_left(45)
+        self.move_forward(1.0)
+        
+        print("=" * 40)
+        print("✅ Robot program completed successfully!")
+        print(f"Final heading: {self.heading}°")
 
 def main():
-    """Main robot program"""
-    print("Starting robot program...")
-    
-    # Move forward for 2 seconds
-    robot.move_forward()
-    time.sleep(2)
-    
-    # Turn right
-    robot.turn_right()
-    time.sleep(1)
-    
-    # Move forward again
-    robot.move_forward()
-    time.sleep(2)
-    
-    # Stop the robot
-    robot.stop()
-    print("Robot program completed!")
+    """Program entry point"""
+    try:
+        # Create robot controller instance
+        controller = RobotController()
+        
+        # Execute the main program
+        controller.execute_program()
+        
+    except KeyboardInterrupt:
+        print("\\n⚠️  Program interrupted by user")
+        robot.stop()
+        
+    except Exception as e:
+        print(f"❌ Error occurred: {e}")
+        robot.stop()
+        
+    finally:
+        print("🔄 Cleaning up and stopping robot...")
+        robot.stop()
 
 if __name__ == "__main__":
     main()
 `;
     }
 
+    const lineCount = codeToShow.split('\n').length;
+    const wordCount = codeToShow.split(/\s+/).length;
+
     return (
-      <div className="flex-1 flex flex-col">
-        <div className="flex items-center justify-between px-6 py-3 bg-panel-bg border-b border-border-color">
-          <h2 className="text-lg font-semibold text-text-primary">
-            Review Generated Code
-          </h2>
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex items-center justify-between px-6 py-3 bg-panel-bg border-b border-border-color shrink-0">
+          <div className="flex items-center space-x-4">
+            <h2 className="text-lg font-semibold text-text-primary">
+              Code Review & Analysis
+            </h2>
+            <div className="flex items-center space-x-4 text-sm text-text-secondary">
+              <span className="flex items-center">
+                <Code className="w-4 h-4 mr-1" />
+                {lineCount} lines
+              </span>
+              <span>•</span>
+              <span>{wordCount} words</span>
+              <span>•</span>
+              <span className="text-accent-green">Ready to simulate</span>
+            </div>
+          </div>
           <div className="flex space-x-2">
             <Button 
               variant="outline" 
@@ -277,18 +371,31 @@ if __name__ == "__main__":
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col bg-editor-bg min-h-0">
-          <div className="px-4 py-1 bg-panel-bg border-b border-border-color shrink-0">
-            <p className="text-xs text-text-secondary">
-              {programmingMode === 'visual' 
-                ? 'Generated from visual blocks'
-                : 'Python code review'
-              }
-            </p>
-          </div>
+        <div className="flex-1 flex bg-editor-bg min-h-0">
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="px-4 py-2 bg-panel-bg border-b border-border-color shrink-0">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-text-primary flex items-center">
+                  <Code className="w-4 h-4 mr-2" />
+                  Generated Python Code
+                </h3>
+                <span className="text-xs text-text-secondary">
+                  {programmingMode === 'visual' 
+                    ? '🎯 Auto-generated from visual blocks'
+                    : '📝 Direct Python code'
+                  }
+                </span>
+              </div>
+            </div>
 
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <CodeEditor project={currentProject} readOnly={true} code={codeToShow} fullWidth={true} />
+            <div className="flex-1 min-h-0">
+              <CodeEditor 
+                project={currentProject} 
+                readOnly={true} 
+                code={codeToShow} 
+                fullWidth={true} 
+              />
+            </div>
           </div>
         </div>
       </div>
