@@ -17,7 +17,7 @@ import {
   ResizablePanel, 
   ResizableHandle 
 } from "@/components/ui/resizable";
-import { generateCodeFromBlocks } from '@/lib/codeGenerator';
+import { generatePythonCode } from '@/lib/codeGenerator';
 
 export type ProgrammingMode = 'visual' | 'python';
 export type WorkflowStep = 'select-mode' | 'programming' | 'code-review' | 'simulation';
@@ -205,7 +205,7 @@ export default function IDE() {
   );
 
   const renderCodeReviewStep = () => {
-    const codeToShow = generatedCode || generateCodeFromBlocks(blocks);
+    const codeToShow = generatedCode || generatePythonCode(currentProject?.blocks || [])mBlocks(blocks);
 
     return (
       <div className="flex-1 flex flex-col">
