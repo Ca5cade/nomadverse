@@ -9,9 +9,10 @@ interface CodeEditorProps {
   project?: Project;
   fullWidth?: boolean;
   readOnly?: boolean;
+  code?: string;
 }
 
-export default function CodeEditor({ project, readOnly = false, fullWidth = false }: CodeEditorProps) {
+export default function CodeEditor({ project, readOnly = false, fullWidth = false, code: providedCode }: CodeEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [isReadOnly, setIsReadOnly] = useState(readOnly);
@@ -19,7 +20,9 @@ export default function CodeEditor({ project, readOnly = false, fullWidth = fals
 
   // Generate code from project blocks when project changes
   useEffect(() => {
-    if (project?.blocks && project.blocks.length > 0) {
+    if (providedCode) {
+      setCode(providedCode);
+    } else if (project?.blocks && project.blocks.length > 0) {
       const generatedCode = generatePythonCode(project.blocks);
       setCode(generatedCode);
     } else if (project) {
@@ -35,7 +38,7 @@ if __name__ == "__main__":
     main()
 `);
     }
-  }, [project?.blocks, project]);
+  }, [project?.blocks, project, providedCode]);
 
   const handleCopyCode = async () => {
     try {
