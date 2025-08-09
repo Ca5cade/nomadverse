@@ -300,50 +300,103 @@ export class RobotSimulator {
 
     switch (command.type) {
       case 'move_forward':
-        this.moveRobot(command.value);
+        this.smoothMoveRobot(command.value, command.delay);
         break;
       case 'move_backward':
-        this.moveRobot(-command.value);
+        this.smoothMoveRobot(-command.value, command.delay);
         break;
       case 'turn_left':
-        this.rotateRobot(-command.value);
+        this.smoothRotateRobot(-command.value, command.delay);
         break;
       case 'turn_right':
-        this.rotateRobot(command.value);
+        this.smoothRotateRobot(command.value, command.delay);
         break;
       case 'wait':
-        break;
+        setTimeout(() => {
+          this.robotState.isMoving = false;
+          this.onCommandComplete(command);
+          this.onStateChange(this.robotState);
+          this.executeNextCommand();
+        }, command.delay);
+        return;
     }
-
-    setTimeout(() => {
-      this.robotState.isMoving = false;
-      this.onCommandComplete(command);
-      this.onStateChange(this.robotState);
-      this.executeNextCommand();
-    }, command.delay);
   }
 
-  private moveRobot(distance: number): void {
+  private smoothMoveRobot(distance: number, duration: number): void {
+    const startPosition = this.robot.position.clone();
     const direction = new THREE.Vector3(0, 0, distance * 0.1);
     direction.applyQuaternion(this.robot.quaternion);
-
-    this.robot.position.add(direction);
-    this.robotState.position = {
-      x: this.robot.position.x,
-      y: this.robot.position.y,
-      z: this.robot.position.z
+    const targetPosition = startPosition.clone().add(direction);
+    
+    const startTime = performance.now();
+    
+    const animate = () => {
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Use easeInOutCubic for smoother movement
+      const easedProgress = progress < 0.5 
+        ? 4 * progress * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      
+      this.robot.position.lerpVectors(startPosition, targetPosition, easedProgress);
+      
+      this.robotState.position = {
+        x: this.robot.position.x,
+        y: this.robot.position.y,
+        z: this.robot.position.z
+      };
+      this.onStateChange(this.robotState);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        this.robotState.isMoving = false;
+        this.onCommandComplete({ type: 'move_forward', value: distance, delay: duration });
+        this.onStateChange(this.robotState);
+        this.executeNextCommand();
+      }
     };
+    
+    animate();
   }
 
-  private rotateRobot(degrees: number): void {
+  private smoothRotateRobot(degrees: number, duration: number): void {
+    const startRotation = this.robot.rotation.y;
     const radians = (degrees * Math.PI) / 180;
-    this.robot.rotation.y += radians;
-
-    this.robotState.rotation = {
-      x: this.robot.rotation.x,
-      y: this.robot.rotation.y,
-      z: this.robot.rotation.z
+    const targetRotation = startRotation + radians;
+    
+    const startTime = performance.now();
+    
+    const animate = () => {
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Use easeInOutCubic for smoother rotation
+      const easedProgress = progress < 0.5 
+        ? 4 * progress * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      
+      this.robot.rotation.y = startRotation + (targetRotation - startRotation) * easedProgress;
+      
+      this.robotState.rotation = {
+        x: this.robot.rotation.x,
+        y: this.robot.rotation.y,
+        z: this.robot.rotation.z
+      };
+      this.onStateChange(this.robotState);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        this.robotState.isMoving = false;
+        this.onCommandComplete({ type: 'turn_right', value: degrees, delay: duration });
+        this.onStateChange(this.robotState);
+        this.executeNextCommand();
+      }
     };
+    
+    animate();
   }
 
   public setSpeed(speed: number): void {

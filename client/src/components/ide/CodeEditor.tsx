@@ -11,7 +11,7 @@ interface CodeEditorProps {
   readOnly?: boolean;
 }
 
-export default function CodeEditor({ project, fullWidth = false, readOnly = false }: CodeEditorProps) {
+export default function CodeEditor({ project, readOnly = false, fullWidth = false }: CodeEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [isReadOnly, setIsReadOnly] = useState(readOnly);
@@ -22,19 +22,20 @@ export default function CodeEditor({ project, fullWidth = false, readOnly = fals
     if (project?.blocks && project.blocks.length > 0) {
       const generatedCode = generatePythonCode(project.blocks);
       setCode(generatedCode);
-    } else {
-      setCode(`# Generated from visual blocks
-import robot
-import time
+    } else if (project) {
+      // Default code if no blocks
+      setCode(`# Robot Program
+# Add some blocks in Visual Programming mode to generate code here
 
 def main():
-    # No blocks to execute
+    """Main robot program"""
     pass
 
 if __name__ == "__main__":
-    main()`);
+    main()
+`);
     }
-  }, [project?.blocks]);
+  }, [project?.blocks, project]);
 
   const handleCopyCode = async () => {
     try {
@@ -63,6 +64,14 @@ if __name__ == "__main__":
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  if (!project) {
+    return (
+      <div className="h-full flex items-center justify-center bg-editor-bg">
+        <p className="text-text-muted">No project selected</p>
+      </div>
+    );
+  }
 
   return (
     <div className={`bg-editor-bg border-l border-border-color flex flex-col ${fullWidth ? 'flex-1' : 'w-96'}`}>
@@ -136,14 +145,14 @@ if __name__ == "__main__":
                       if (['main', 'move_forward', 'move_backward', 'turn_left', 'turn_right', 'sleep'].includes(word.replace(/[(),:]/g, ''))) {
                         return <span key={wordIndex} className="text-yellow-400">{word} </span>;
                       }
-                      if (!isNaN(Number(word)) && word !== '') {
+                      if (word.match(/^\d+$/)) {
                         return <span key={wordIndex} className="text-green-400">{word} </span>;
                       }
                       if (word.startsWith('"') || word.startsWith("'")) {
-                        return <span key={wordIndex} className="text-green-400">{word} </span>;
+                        return <span key={wordIndex} className="text-green-300">{word} </span>;
                       }
                       if (word.startsWith('#')) {
-                        return <span key={wordIndex} className="text-gray-400">{word} </span>;
+                        return <span key={wordIndex} className="text-gray-500">{word} </span>;
                       }
                       return <span key={wordIndex} className="text-white">{word} </span>;
                     })}
@@ -160,6 +169,11 @@ if __name__ == "__main__":
             placeholder="Edit Python code here..."
             data-testid="code-editor-textarea"
           />
+        )}
+        {!code && (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-400">No code to display. Create some blocks to generate code.</p>
+          </div>
         )}
       </div>
     </div>

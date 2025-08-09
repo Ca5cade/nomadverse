@@ -205,31 +205,43 @@ export default function IDE() {
   );
 
   const renderCodeReviewStep = () => {
-    const codeToShow = generatedCode || generatePythonCode(currentProject?.blocks || []);
+    // Always generate fresh code from current blocks
+    const codeToShow = currentProject?.blocks && currentProject.blocks.length > 0 
+      ? generatePythonCode(currentProject.blocks) 
+      : `# Robot Program
+# Add some blocks in Visual Programming mode to generate code here
+
+def main():
+    """Main robot program"""
+    pass
+
+if __name__ == "__main__":
+    main()
+`;
 
     return (
       <div className="flex-1 flex flex-col">
         <div className="flex items-center justify-between px-6 py-3 bg-panel-bg border-b border-border-color">
           <h2 className="text-lg font-semibold text-text-primary">
-            Generated Python Code
+            Review Generated Code
           </h2>
           <div className="flex space-x-2">
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => setWorkflowStep('programming')}
+              onClick={() => setWorkflowStep('visual')}
               className="border-border-color hover:bg-panel-active"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Editor
+              Back to Blocks
             </Button>
             <Button 
               size="sm"
               onClick={() => setWorkflowStep('simulation')}
               className="bg-accent-green hover:bg-accent-green/80 text-white"
             >
+              <Play className="w-4 h-4 mr-2" />
               Run Simulation
-              <Play className="w-4 h-4 ml-2" />
             </Button>
           </div>
         </div>
@@ -249,7 +261,7 @@ export default function IDE() {
             </div>
 
             <div className="bg-panel-bg border border-border-color rounded-lg overflow-hidden">
-              <CodeEditor project={currentProject} readOnly={true} />
+              <CodeEditor project={currentProject} readOnly={true} code={codeToShow} />
             </div>
           </div>
         </div>
