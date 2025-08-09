@@ -76,20 +76,30 @@ export default function BlockCanvas({ project }: BlockCanvasProps) {
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    const blockData = JSON.parse(e.dataTransfer.getData('text/plain'));
-    const rect = canvasRef.current?.getBoundingClientRect();
+    e.stopPropagation();
     
-    if (rect) {
-      const newBlock: CanvasBlock = {
-        id: `${blockData.type}-${Date.now()}`,
-        type: blockData.type,
-        category: getBlockConfig(blockData.type)?.category || 'motion',
-        x: e.clientX - rect.left - 264, // Account for palette width
-        y: e.clientY - rect.top,
-        inputs: {},
-      };
+    try {
+      const blockData = JSON.parse(e.dataTransfer.getData('text/plain'));
+      const rect = canvasRef.current?.getBoundingClientRect();
+      
+      if (rect && blockData.type) {
+        const config = getBlockConfig(blockData.type);
+        const newBlock: CanvasBlock = {
+          id: `${blockData.type}-${Date.now()}`,
+          type: blockData.type,
+          category: config?.category || 'motion',
+          x: Math.max(0, e.clientX - rect.left - 264), // Account for palette width
+          y: Math.max(0, e.clientY - rect.top),
+          inputs: config?.inputs?.reduce((acc, input) => ({
+            ...acc,
+            [input.name]: input.defaultValue
+          }), {}) || {},
+        };
 
-      setBlocks(prev => [...prev, newBlock]);
+        setBlocks(prev => [...prev, newBlock]);
+      }
+    } catch (error) {
+      console.error('Error dropping block:', error);
     }
   }, []);
 
@@ -99,6 +109,17 @@ export default function BlockCanvas({ project }: BlockCanvasProps) {
 
   const handleBlockDragStart = (e: React.DragEvent, blockId: string) => {
     e.dataTransfer.setData('text/plain', blockId);
+    e.dataTransfer.effectAllowed = 'move';
+    
+    // Get the element being dragged
+    const draggedElement = e.currentTarget as HTMLElement;
+    const rect = draggedElement.getBoundingClientRect();
+    
+    // Store the offset from mouse to top-left of element
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    e.dataTransfer.setData('application/offset', JSON.stringify({ offsetX, offsetY }));
+    
     setBlocks(prev => prev.map(b => 
       b.id === blockId ? { ...b, isDragging: true } : b
     ));
@@ -106,16 +127,30 @@ export default function BlockCanvas({ project }: BlockCanvasProps) {
 
   const handleBlockDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
     const blockId = e.dataTransfer.getData('text/plain');
     const rect = canvasRef.current?.getBoundingClientRect();
     
     if (rect && blockId) {
+      let offsetX = 0, offsetY = 0;
+      try {
+        const offsetData = e.dataTransfer.getData('application/offset');
+        if (offsetData) {
+          const offset = JSON.parse(offsetData);
+          offsetX = offset.offsetX || 0;
+          offsetY = offset.offsetY || 0;
+        }
+      } catch (error) {
+        console.error('Error parsing offset data:', error);
+      }
+      
       setBlocks(prev => prev.map(b => 
         b.id === blockId 
           ? { 
               ...b, 
-              x: e.clientX - rect.left - 264,
-              y: e.clientY - rect.top,
+              x: Math.max(0, e.clientX - rect.left - 264 - offsetX),
+              y: Math.max(0, e.clientY - rect.top - offsetY),
               isDragging: false 
             }
           : { ...b, isDragging: false }
@@ -169,6 +204,7 @@ export default function BlockCanvas({ project }: BlockCanvasProps) {
         style={{ left: block.x, top: block.y, zIndex: block.isDragging ? 1000 : 1 }}
         draggable
         onDragStart={(e) => handleBlockDragStart(e, block.id)}
+        onDragEnd={() => setBlocks(prev => prev.map(b => ({ ...b, isDragging: false })))}
         data-testid={`canvas-block-${block.id}`}
       >
         {getIcon()}

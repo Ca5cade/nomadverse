@@ -9,13 +9,17 @@ interface SimulationViewportProps {
   blocks?: any[];
   runTrigger?: number;
   fullWidth?: boolean;
+  onToggleSimulation?: () => void;
+  onStopSimulation?: () => void;
 }
 
 export default function SimulationViewport({
   project,
   blocks = [],
   runTrigger = 0,
-  fullWidth = false
+  fullWidth = false,
+  onToggleSimulation = () => {},
+  onStopSimulation = () => {}
 }: SimulationViewportProps) {
   const [isRunning, setIsRunning] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);

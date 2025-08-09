@@ -1,3 +1,4 @@
+
 import * as THREE from 'three';
 import { Block } from "@shared/schema";
 
@@ -54,11 +55,9 @@ export class RobotSimulator {
   }
 
   private initThreeJS() {
-    // Create scene
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x1a1a2e);
     
-    // Create camera
     this.camera = new THREE.PerspectiveCamera(
       75, 
       this.canvas.clientWidth / this.canvas.clientHeight, 
@@ -68,7 +67,6 @@ export class RobotSimulator {
     this.camera.position.set(10, 10, 10);
     this.camera.lookAt(0, 0, 0);
     
-    // Create renderer
     this.renderer = new THREE.WebGLRenderer({ 
       canvas: this.canvas,
       antialias: true,
@@ -83,7 +81,6 @@ export class RobotSimulator {
   private createRobot() {
     this.robot = new THREE.Group();
     
-    // Robot body (cube)
     const bodyGeometry = new THREE.BoxGeometry(1, 0.5, 1.5);
     const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x4299ff });
     this.robotMesh = new THREE.Mesh(bodyGeometry, bodyMaterial);
@@ -91,7 +88,6 @@ export class RobotSimulator {
     this.robotMesh.castShadow = true;
     this.robot.add(this.robotMesh);
     
-    // Robot eyes (spheres)
     const eyeGeometry = new THREE.SphereGeometry(0.1, 8, 8);
     const eyeMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff });
     
@@ -103,7 +99,6 @@ export class RobotSimulator {
     rightEye.position.set(0.2, 0.4, 0.6);
     this.robot.add(rightEye);
     
-    // Robot wheels
     const wheelGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 8);
     const wheelMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
     
@@ -121,7 +116,6 @@ export class RobotSimulator {
   }
 
   private createEnvironment() {
-    // Floor
     const floorGeometry = new THREE.PlaneGeometry(50, 50);
     const floorMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -129,11 +123,9 @@ export class RobotSimulator {
     floor.receiveShadow = true;
     this.scene.add(floor);
     
-    // Grid helper
     const gridHelper = new THREE.GridHelper(50, 50, 0x888888, 0x444444);
     this.scene.add(gridHelper);
     
-    // Some obstacles
     const obstacleGeometry = new THREE.BoxGeometry(1, 1, 1);
     const obstacleMaterial = new THREE.MeshLambertMaterial({ color: 0xff6b6b });
     
@@ -150,11 +142,9 @@ export class RobotSimulator {
   }
 
   private setupLighting() {
-    // Ambient light
     const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
     this.scene.add(ambientLight);
     
-    // Directional light
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(10, 10, 5);
     directionalLight.castShadow = true;
@@ -170,7 +160,6 @@ export class RobotSimulator {
     
     this.animationId = requestAnimationFrame(this.animate);
     
-    // Update camera to orbit around robot
     const time = Date.now() * 0.0005;
     this.camera.position.x = Math.cos(time) * 15;
     this.camera.position.z = Math.sin(time) * 15;
@@ -197,13 +186,11 @@ export class RobotSimulator {
   public generateCommandsFromBlocks(blocks: Block[]): SimulationCommand[] {
     const commands: SimulationCommand[] = [];
     
-    // Find the start block and process the sequence
     const startBlock = blocks.find(b => b.type === 'when_flag_clicked');
     if (startBlock) {
       this.processBlock(startBlock, blocks, commands);
     }
 
-    // Process other standalone blocks
     blocks.forEach(block => {
       if (block.type !== 'when_flag_clicked' && !this.isChildBlock(block, blocks)) {
         this.processBlock(block, blocks, commands);
@@ -223,7 +210,7 @@ export class RobotSimulator {
         commands.push({
           type: 'move_forward',
           value: block.inputs?.steps || 10,
-          delay: 1000
+          delay: 1000 / this.simulationSpeed
         });
         break;
       
@@ -231,7 +218,7 @@ export class RobotSimulator {
         commands.push({
           type: 'move_backward',
           value: block.inputs?.steps || 10,
-          delay: 1000
+          delay: 1000 / this.simulationSpeed
         });
         break;
       
@@ -239,7 +226,7 @@ export class RobotSimulator {
         commands.push({
           type: 'turn_left',
           value: block.inputs?.degrees || 90,
-          delay: 800
+          delay: 800 / this.simulationSpeed
         });
         break;
       
@@ -247,7 +234,7 @@ export class RobotSimulator {
         commands.push({
           type: 'turn_right',
           value: block.inputs?.degrees || 90,
-          delay: 800
+          delay: 800 / this.simulationSpeed
         });
         break;
       
@@ -255,7 +242,7 @@ export class RobotSimulator {
         commands.push({
           type: 'wait',
           value: block.inputs?.seconds || 1,
-          delay: (block.inputs?.seconds || 1) * 1000
+          delay: (block.inputs?.seconds || 1) * 1000 / this.simulationSpeed
         });
         break;
       
@@ -276,14 +263,16 @@ export class RobotSimulator {
   }
 
   public executeCommands(commands: SimulationCommand[]): void {
-    this.commands = commands;
+    this.commands = [...commands];
     this.isRunning = true;
     this.executeNextCommand();
   }
 
   private executeNextCommand(): void {
-    if (this.commands.length === 0) {
+    if (this.commands.length === 0 || !this.isRunning) {
       this.isRunning = false;
+      this.robotState.isMoving = false;
+      this.onStateChange(this.robotState);
       return;
     }
 
@@ -293,6 +282,7 @@ export class RobotSimulator {
 
   private executeCommand(command: SimulationCommand): void {
     this.robotState.isMoving = true;
+    this.onStateChange(this.robotState);
     
     switch (command.type) {
       case 'move_forward':
@@ -308,17 +298,13 @@ export class RobotSimulator {
         this.rotateRobot(command.value);
         break;
       case 'wait':
-        setTimeout(() => {
-          this.robotState.isMoving = false;
-          this.onCommandComplete(command);
-          this.executeNextCommand();
-        }, command.delay);
-        return;
+        break;
     }
 
     setTimeout(() => {
       this.robotState.isMoving = false;
       this.onCommandComplete(command);
+      this.onStateChange(this.robotState);
       this.executeNextCommand();
     }, command.delay);
   }
@@ -333,8 +319,6 @@ export class RobotSimulator {
       y: this.robot.position.y,
       z: this.robot.position.z
     };
-    
-    this.onStateChange(this.robotState);
   }
 
   private rotateRobot(degrees: number): void {
@@ -346,13 +330,11 @@ export class RobotSimulator {
       y: this.robot.rotation.y,
       z: this.robot.rotation.z
     };
-    
-    this.onStateChange(this.robotState);
   }
 
   public setSpeed(speed: number): void {
-    this.simulationSpeed = speed;
-    this.robotState.speed = speed;
+    this.simulationSpeed = Math.max(0.1, Math.min(3.0, speed));
+    this.robotState.speed = this.simulationSpeed;
   }
 
   public reset(): void {
@@ -371,6 +353,7 @@ export class RobotSimulator {
     this.isRunning = false;
     this.commands = [];
     this.robotState.isMoving = false;
+    this.onStateChange(this.robotState);
   }
 
   public setViewMode(mode: '3d' | 'top' | 'side'): void {

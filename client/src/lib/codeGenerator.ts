@@ -9,21 +9,35 @@ export function generatePythonCode(blocks: Block[]): string {
 
   const mainFunctionLines: string[] = [];
   
-  // Find the start block
-  const startBlock = blocks.find(b => b.type === 'when_flag_clicked');
-  if (startBlock) {
-    generateBlockCode(startBlock, blocks, mainFunctionLines, 1);
-  }
-
-  // Generate other standalone blocks
-  blocks.forEach(block => {
-    if (block.type !== 'when_flag_clicked' && !isChildBlock(block, blocks)) {
-      generateBlockCode(block, blocks, mainFunctionLines, 1);
+  if (blocks.length === 0) {
+    mainFunctionLines.push("    # No blocks to execute");
+    mainFunctionLines.push("    pass");
+  } else {
+    // Find the start block
+    const startBlock = blocks.find(b => b.type === 'when_flag_clicked');
+    if (startBlock) {
+      mainFunctionLines.push("    # Start of program");
+      generateBlockCode(startBlock, blocks, mainFunctionLines, 1);
     }
-  });
+
+    // Generate other standalone blocks
+    const standaloneBlocks = blocks.filter(block => 
+      block.type !== 'when_flag_clicked' && !isChildBlock(block, blocks)
+    );
+    
+    if (standaloneBlocks.length > 0) {
+      if (startBlock) mainFunctionLines.push("");
+      mainFunctionLines.push("    # Standalone blocks");
+      standaloneBlocks.forEach(block => {
+        generateBlockCode(block, blocks, mainFunctionLines, 1);
+      });
+    }
+  }
 
   const code = [
     "# Generated from visual blocks",
+    "# This code controls a robot using the robot module",
+    "",
     ...imports,
     "",
     "def main():",
@@ -47,59 +61,82 @@ function generateBlockCode(block: Block, allBlocks: Block[], lines: string[], in
   if (!config) return;
 
   switch (block.type) {
+    case 'when_flag_clicked':
+      lines.push(`${indent}# Program starts here`);
+      // Process any connected blocks after this
+      if (block.children) {
+        block.children.forEach(childId => {
+          const childBlock = allBlocks.find(b => b.id === childId);
+          if (childBlock) {
+            generateBlockCode(childBlock, allBlocks, lines, indentLevel);
+          }
+        });
+      }
+      break;
+      
     case 'move_forward':
-      lines.push(`${indent}robot.move_forward(${block.inputs?.steps || 10})`);
+      const forwardSteps = block.inputs?.steps || 10;
+      lines.push(`${indent}robot.move_forward(${forwardSteps})  # Move forward ${forwardSteps} steps`);
       break;
     
     case 'move_backward':
-      lines.push(`${indent}robot.move_backward(${block.inputs?.steps || 10})`);
+      const backwardSteps = block.inputs?.steps || 10;
+      lines.push(`${indent}robot.move_backward(${backwardSteps})  # Move backward ${backwardSteps} steps`);
       break;
     
     case 'turn_left':
-      lines.push(`${indent}robot.turn_left(${block.inputs?.degrees || 90})`);
+      const leftDegrees = block.inputs?.degrees || 90;
+      lines.push(`${indent}robot.turn_left(${leftDegrees})  # Turn left ${leftDegrees} degrees`);
       break;
     
     case 'turn_right':
-      lines.push(`${indent}robot.turn_right(${block.inputs?.degrees || 90})`);
+      const rightDegrees = block.inputs?.degrees || 90;
+      lines.push(`${indent}robot.turn_right(${rightDegrees})  # Turn right ${rightDegrees} degrees`);
       break;
     
     case 'repeat':
-      lines.push(`${indent}for i in range(${block.inputs?.times || 10}):`);
-      // Process child blocks
-      if (block.children) {
+      const times = block.inputs?.times || 10;
+      lines.push(`${indent}for i in range(${times}):  # Repeat ${times} times`);
+      if (block.children && block.children.length > 0) {
         block.children.forEach(childId => {
           const childBlock = allBlocks.find(b => b.id === childId);
           if (childBlock) {
             generateBlockCode(childBlock, allBlocks, lines, indentLevel + 1);
           }
         });
+      } else {
+        lines.push(`${indent}    pass  # No blocks inside repeat`);
       }
       break;
     
     case 'wait':
-      lines.push(`${indent}time.sleep(${block.inputs?.seconds || 1})`);
+      const seconds = block.inputs?.seconds || 1;
+      lines.push(`${indent}time.sleep(${seconds})  # Wait ${seconds} second(s)`);
       break;
     
     case 'if':
       const condition = block.inputs?.condition || 'True';
       lines.push(`${indent}if ${condition}:`);
-      // Process child blocks
-      if (block.children) {
+      if (block.children && block.children.length > 0) {
         block.children.forEach(childId => {
           const childBlock = allBlocks.find(b => b.id === childId);
           if (childBlock) {
             generateBlockCode(childBlock, allBlocks, lines, indentLevel + 1);
           }
         });
+      } else {
+        lines.push(`${indent}    pass  # No blocks inside if`);
       }
       break;
     
     case 'touching':
-      lines.push(`${indent}robot.is_touching("${block.inputs?.object || 'wall'}")`);
+      const touchObject = block.inputs?.object || 'wall';
+      lines.push(`${indent}robot.is_touching("${touchObject}")  # Check if touching ${touchObject}`);
       break;
     
     case 'distance':
-      lines.push(`${indent}robot.distance_to("${block.inputs?.object || 'wall'}")`);
+      const distanceObject = block.inputs?.object || 'wall';
+      lines.push(`${indent}robot.distance_to("${distanceObject}")  # Get distance to ${distanceObject}`);
       break;
   }
 }
