@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Pause, RotateCcw, Settings, Zap, Activity, Maximize2, Camera } from "lucide-react";
 import { RobotSimulator } from '@/lib/robotSimulator';
 import { Project } from '@/shared/schema';
-import { generateCodeFromBlocks } from '@/lib/codeGenerator';
+import { generatePythonCode } from '@/lib/codeGenerator';
 
 interface SimulationViewportProps {
   project?: any;
@@ -103,7 +103,24 @@ export default function SimulationViewport({
   useEffect(() => {
     if (!mountRef.current) return;
 
-    const simulator = new RobotSimulator(mountRef.current);
+    const handleStateChange = (state: any) => {
+      setRobotPosition(state.position);
+      setStats(prev => ({
+        ...prev,
+        position: state.position,
+        rotation: state.rotation.y * (180 / Math.PI)
+      }));
+    };
+
+    const handleCommandComplete = (command: any) => {
+      setExecutionStep(prev => prev + 1);
+    };
+
+    const simulator = new RobotSimulator(
+      mountRef.current,
+      handleStateChange,
+      handleCommandComplete
+    );
     simulatorRef.current = simulator;
     lastFrameTimeRef.current = performance.now();
 
