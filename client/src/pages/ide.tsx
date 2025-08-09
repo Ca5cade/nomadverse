@@ -277,9 +277,9 @@ if __name__ == "__main__":
           </div>
         </div>
 
-        <div className="flex-1 p-6 bg-editor-bg">
-          <div className="max-w-4xl mx-auto">
-            <div className="mb-6">
+        <div className="flex-1 p-4 bg-editor-bg">
+          <div className="h-full flex flex-col">
+            <div className="mb-4">
               <h3 className="text-xl font-semibold text-text-primary mb-2">
                 Review Your Robot Program
               </h3>
@@ -291,9 +291,9 @@ if __name__ == "__main__":
               </p>
             </div>
 
-            <div className="bg-panel-bg border border-border-color rounded-lg overflow-hidden h-96">
-              <div className="p-4 h-full flex flex-col">
-                <h4 className="text-sm font-medium text-text-primary mb-4 flex items-center">
+            <div className="bg-panel-bg border border-border-color rounded-lg overflow-hidden flex-1">
+              <div className="p-3 h-full flex flex-col">
+                <h4 className="text-sm font-medium text-text-primary mb-3 flex items-center">
                   <Code className="w-4 h-4 mr-2" />
                   Generated Python Code ({codeToShow.split('\n').length} lines)
                 </h4>
