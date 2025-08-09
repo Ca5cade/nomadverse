@@ -161,7 +161,7 @@ export default function IDE() {
             onClick={() => {
               setWorkflowStep('code-review');
               if (programmingMode === 'visual' && blocks) {
-                setGeneratedCode(generateCodeFromBlocks(blocks));
+                setGeneratedCode(generatePythonCode(blocks));
               }
             }}
             className="bg-accent-blue hover:bg-accent-blue-hover text-white"
@@ -205,7 +205,7 @@ export default function IDE() {
   );
 
   const renderCodeReviewStep = () => {
-    const codeToShow = generatedCode || generatePythonCode(currentProject?.blocks || [])mBlocks(blocks);
+    const codeToShow = generatedCode || generatePythonCode(currentProject?.blocks || []);
 
     return (
       <div className="flex-1 flex flex-col">
