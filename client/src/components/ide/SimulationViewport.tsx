@@ -246,11 +246,6 @@ export default function SimulationViewport({
 
       {/* Canvas */}
       <div className="flex-1 relative bg-gradient-to-br from-gray-900 to-gray-800 overflow-hidden" ref={mountRef}>
-        <canvas
-          ref={canvasRef}
-          className="w-full h-full"
-          style={{ background: 'radial-gradient(circle at center, #1a1a2e 0%, #16213e 50%, #0f172a 100%)' }}
-        />
 
         {/* Control Buttons */}
         <div className="absolute top-4 left-4 flex space-x-2 z-10">
