@@ -291,13 +291,15 @@ if __name__ == "__main__":
               </p>
             </div>
 
-            <div className="bg-panel-bg border border-border-color rounded-lg overflow-hidden">
-              <div className="p-4">
+            <div className="bg-panel-bg border border-border-color rounded-lg overflow-hidden h-96">
+              <div className="p-4 h-full flex flex-col">
                 <h4 className="text-sm font-medium text-text-primary mb-4 flex items-center">
                   <Code className="w-4 h-4 mr-2" />
                   Generated Python Code ({codeToShow.split('\n').length} lines)
                 </h4>
-                <CodeEditor project={currentProject} readOnly={true} code={codeToShow} fullWidth={true} />
+                <div className="flex-1 min-h-0">
+                  <CodeEditor project={currentProject} readOnly={true} code={codeToShow} fullWidth={true} />
+                </div>
               </div>
             </div>
           </div>
