@@ -277,20 +277,17 @@ if __name__ == "__main__":
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col bg-editor-bg">
-          <div className="px-6 py-2 bg-panel-bg border-b border-border-color">
-            <h3 className="text-lg font-semibold text-text-primary mb-1">
-              Review Your Robot Program
-            </h3>
-            <p className="text-sm text-text-secondary">
+        <div className="flex-1 flex flex-col bg-editor-bg min-h-0">
+          <div className="px-4 py-1 bg-panel-bg border-b border-border-color shrink-0">
+            <p className="text-xs text-text-secondary">
               {programmingMode === 'visual' 
-                ? 'Generated from visual blocks - review before simulation'
-                : 'Review your Python code before simulation'
+                ? 'Generated from visual blocks'
+                : 'Python code review'
               }
             </p>
           </div>
 
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <CodeEditor project={currentProject} readOnly={true} code={codeToShow} fullWidth={true} />
           </div>
         </div>
