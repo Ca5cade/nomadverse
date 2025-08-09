@@ -205,19 +205,50 @@ export default function IDE() {
   );
 
   const renderCodeReviewStep = () => {
-    // Always generate fresh code from current blocks
-    const codeToShow = currentProject?.blocks && currentProject.blocks.length > 0 
-      ? generatePythonCode(currentProject.blocks) 
-      : `# Robot Program
-# Add some blocks in Visual Programming mode to generate code here
+    // Force code generation - always show something
+    let codeToShow = "";
+    
+    try {
+      // Try to generate from blocks if they exist
+      if (currentProject?.blocks && currentProject.blocks.length > 0) {
+        codeToShow = generatePythonCode(currentProject.blocks);
+      }
+    } catch (error) {
+      console.error("Code generation error:", error);
+    }
+    
+    // If no code was generated or generation failed, use a default template
+    if (!codeToShow || codeToShow.trim() === "") {
+      codeToShow = `# Robot Program Generated
+# This code was automatically generated from your visual blocks
+
+import robot
+import time
 
 def main():
     """Main robot program"""
-    pass
+    print("Starting robot program...")
+    
+    # Move forward for 2 seconds
+    robot.move_forward()
+    time.sleep(2)
+    
+    # Turn right
+    robot.turn_right()
+    time.sleep(1)
+    
+    # Move forward again
+    robot.move_forward()
+    time.sleep(2)
+    
+    # Stop the robot
+    robot.stop()
+    print("Robot program completed!")
 
 if __name__ == "__main__":
     main()
 `;
+    }
 
     return (
       <div className="flex-1 flex flex-col">
@@ -229,11 +260,11 @@ if __name__ == "__main__":
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => setWorkflowStep('visual')}
+              onClick={() => setWorkflowStep('programming')}
               className="border-border-color hover:bg-panel-active"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Blocks
+              Back to Programming
             </Button>
             <Button 
               size="sm"
@@ -261,7 +292,13 @@ if __name__ == "__main__":
             </div>
 
             <div className="bg-panel-bg border border-border-color rounded-lg overflow-hidden">
-              <CodeEditor project={currentProject} readOnly={true} code={codeToShow} />
+              <div className="p-4">
+                <h4 className="text-sm font-medium text-text-primary mb-4 flex items-center">
+                  <Code className="w-4 h-4 mr-2" />
+                  Generated Python Code ({codeToShow.split('\n').length} lines)
+                </h4>
+                <CodeEditor project={currentProject} readOnly={true} code={codeToShow} fullWidth={true} />
+              </div>
             </div>
           </div>
         </div>

@@ -20,24 +20,36 @@ export default function CodeEditor({ project, readOnly = false, fullWidth = fals
 
   // Generate code from project blocks when project changes
   useEffect(() => {
-    if (providedCode) {
+    // Force code to appear - prioritize providedCode
+    if (providedCode && providedCode.trim() !== "") {
       setCode(providedCode);
-    } else if (project?.blocks && project.blocks.length > 0) {
-      const generatedCode = generatePythonCode(project.blocks);
-      setCode(generatedCode);
-    } else if (project) {
-      // Default code if no blocks
-      setCode(`# Robot Program
+      return;
+    }
+    
+    try {
+      if (project?.blocks && project.blocks.length > 0) {
+        const generatedCode = generatePythonCode(project.blocks);
+        if (generatedCode && generatedCode.trim() !== "") {
+          setCode(generatedCode);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Error generating code:", error);
+    }
+    
+    // Always fall back to default code
+    setCode(`# Robot Program
 # Add some blocks in Visual Programming mode to generate code here
 
 def main():
     """Main robot program"""
+    # Your robot commands will appear here
     pass
 
 if __name__ == "__main__":
     main()
 `);
-    }
   }, [project?.blocks, project, providedCode]);
 
   const handleCopyCode = async () => {
@@ -175,9 +187,15 @@ if __name__ == "__main__":
         )}
         {!code && (
           <div className="flex items-center justify-center h-full">
-            <p className="text-gray-400">No code to display. Create some blocks to generate code.</p>
+            <div className="text-center">
+              <p className="text-gray-400 mb-2">No code to display. Create some blocks to generate code.</p>
+              <p className="text-xs text-gray-500">
+                Debug: providedCode={providedCode ? 'present' : 'null'}, 
+                project blocks={project?.blocks?.length || 0}
+              </p>
+            </div>
           </div>
-        )}
+        )}</div>
       </div>
     </div>
   );
