@@ -19,9 +19,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Code2, Puzzle, BookOpen } from "lucide-react";
 import CourseDisplay from "@/components/ide/CourseDisplay";
 import { courses, Course } from "@/lib/courses";
-import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+import { useNavigate } from "react-router-dom";
 
 export default function HomePage() {
+  const { user } = useAuth();
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [showTestRunner, setShowTestRunner] = useState(false);
   const [simulationTrigger, setSimulationTrigger] = useState(0);
@@ -30,7 +32,7 @@ export default function HomePage() {
   const { data: projects, isLoading } = useProjects();
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const { mutate: updateProject } = useUpdateProject();
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
 
   const [programmingMode, setProgrammingMode] = useState<'visual' | 'python' | null>(() => {
     return localStorage.getItem('programmingMode') as 'visual' | 'python' | null;
@@ -69,7 +71,7 @@ export default function HomePage() {
   };
 
   const handleClaimCertificate = () => {
-    setLocation("/certificate");
+    navigate("/certificate");
   };
 
   // Select first project by default
@@ -106,13 +108,12 @@ export default function HomePage() {
   };
 
   if (!programmingMode) {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
     return (
       <div className="h-screen flex-1 flex items-center justify-center bg-editor-bg">
         <div className="max-w-4xl w-full px-8">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-text-primary mb-4">
-              Hi {user.username}, Welcome to NomadVerse
+              Hi {user?.email}, Welcome to NomadVerse
             </h1>
             <p className="text-xl text-text-secondary">
               Choose your programming approach to get started

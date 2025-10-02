@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Play, Square, Bot, Save, Download, Upload, Zap, Eye, EyeOff, Sidebar, Palette, Terminal, Sparkles, Code2, MonitorPlay, BookOpen, LogOut } from "lucide-react";
 import { Course } from "@/lib/courses";
-import { useAuth } from "../../hooks/use-auth";
+import { useAuth } from "@/hooks/use-auth";
 
 interface TopMenuBarProps {
   onToggleTestRunner?: () => void;

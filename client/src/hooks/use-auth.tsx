@@ -42,6 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
     if (res.ok) {
+      localStorage.removeItem('courseCompletions');
+      localStorage.removeItem('currentCourseIndex');
+      localStorage.removeItem('programmingMode');
       const userData = await res.json();
       setUser(userData);
     } else {
@@ -57,6 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
     if (res.ok) {
+      localStorage.removeItem('courseCompletions');
+      localStorage.removeItem('currentCourseIndex');
+      localStorage.removeItem('programmingMode');
       const userData = await res.json();
       setUser(userData);
     } else {
@@ -68,6 +74,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     const res = await fetch('/api/auth/logout', { method: 'POST' });
     if (res.ok) {
+      localStorage.removeItem('courseCompletions');
+      localStorage.removeItem('currentCourseIndex');
+      localStorage.removeItem('programmingMode');
       setUser(null);
     } else {
       throw new Error('Logout failed');

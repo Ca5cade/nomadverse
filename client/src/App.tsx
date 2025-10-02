@@ -1,14 +1,14 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import HomePage from "@/pages/home";
-import LandingPage from "@/pages/landing"; // This can be reused or replaced
 import CertificatePage from "@/pages/certificate";
 import LoginPage from "@/pages/Login";
 import RegisterPage from "@/pages/Register";
-import { useAuth } from "./hooks/use-auth";
+import LandingPage from "@/pages/landing";
+import { useAuth } from "@/hooks/use-auth";
 
-function App() {
+function AppRouter() {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -20,34 +20,35 @@ function App() {
   }
 
   return (
+    <Routes>
+      {user ? (
+        <>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/certificate" element={<CertificatePage />} />
+          {/* Redirect authenticated users away from login/register */}
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="/register" element={<Navigate to="/" replace />} />
+        </>
+      ) : (
+        <>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          {/* Redirect other paths to the landing page */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </>
+      )}
+    </Routes>
+  );
+}
+
+function App() {
+  return (
     <div className="dark">
       <TooltipProvider>
         <Toaster />
-        <Switch>
-          {user ? (
-            <>
-              <Route path="/" component={HomePage} />
-              <Route path="/home" component={HomePage} />
-              <Route path="/certificate" component={CertificatePage} />
-              {/* Redirect authenticated users away from login/register */}
-              <Route path="/login">
-                <Redirect to="/" />
-              </Route>
-              <Route path="/register">
-                <Redirect to="/" />
-              </Route>
-            </>
-          ) : (
-            <>
-              <Route path="/login" component={LoginPage} />
-              <Route path="/register" component={RegisterPage} />
-              {/* Redirect unauthenticated users to login */}
-              <Route path="/:rest*">
-                <Redirect to="/login" />
-              </Route>
-            </>
-          )}
-        </Switch>
+        <AppRouter />
       </TooltipProvider>
     </div>
   );

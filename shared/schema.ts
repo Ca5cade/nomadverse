@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, jsonb, timestamp, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -29,6 +29,12 @@ export const files = pgTable("files", {
   type: text("type").notNull(), // 'python', 'blocks', 'scene'
   content: text("content").default(''),
   path: text("path").notNull(),
+});
+
+export const sessions = pgTable("user_sessions", {
+  sid: varchar("sid", { length: 255 }).primaryKey(),
+  sess: json("sess").notNull(),
+  expire: timestamp("expire", { precision: 6, withTimezone: true }).notNull(),
 });
 
 // Schema for inserting a user - Zod validation

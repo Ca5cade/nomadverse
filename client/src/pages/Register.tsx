@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useLocation } from 'wouter';
-import { useAuth } from '../hooks/use-auth';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../components/ui/card';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/use-auth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -12,7 +12,7 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +25,7 @@ export default function RegisterPage() {
     }
     try {
       await register(email, password);
-      setLocation('/');
+      navigate('/');
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.');
     } finally {

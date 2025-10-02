@@ -19,7 +19,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
   app.post("/api/auth/register", async (req, res, next) => {
     try {
-      const { email, password } = insertUserSchema.pick({ email: true, hashedPassword: true }).parse(req.body);
+      const { email, password } = z.object({
+        email: z.string().email(),
+        password: z.string().min(8, "Password must be at least 8 characters long."),
+      }).parse(req.body);
 
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
