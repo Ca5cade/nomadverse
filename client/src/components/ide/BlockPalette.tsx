@@ -1,4 +1,4 @@
-import { ArrowUp, RotateCcw, RotateCw, Repeat, HelpCircle, Clock, Eye, Ruler, Move3D, ChevronDown, ChevronRight, Palette } from "lucide-react";
+import { ArrowUp, ArrowDown, RotateCcw, RotateCw, Repeat, HelpCircle, Clock, Eye, Ruler, Move3D, ChevronDown, ChevronRight, Palette } from "lucide-react";
 import { blockTypes } from "@/lib/blockTypes";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,9 @@ export default function BlockPalette() {
   );
 
   const handleDragStart = (e: React.DragEvent, blockType: string) => {
-    e.dataTransfer.setData('text/plain', JSON.stringify({ type: blockType }));
+    const dataToSet = JSON.stringify({ type: blockType });
+    console.log('Setting dataTransfer:', dataToSet);
+    e.dataTransfer.setData('text/plain', dataToSet);
     e.currentTarget.classList.add('opacity-50');
   };
 
@@ -87,7 +89,10 @@ export default function BlockPalette() {
                     onDragEnd={handleDragEnd}
                     data-testid={`block-${block.type}`}
                   >
-                    <ArrowUp className="w-4 h-4 text-white flex-shrink-0 group-hover:scale-110 transition-transform" />
+                    {block.type === 'moveForward' && <ArrowUp className="w-4 h-4 text-white flex-shrink-0 group-hover:scale-110 transition-transform" />}
+                    {block.type === 'moveBackward' && <ArrowDown className="w-4 h-4 text-white flex-shrink-0 group-hover:scale-110 transition-transform" />}
+                    {block.type === 'turnLeft' && <RotateCcw className="w-4 h-4 text-white flex-shrink-0 group-hover:scale-110 transition-transform" />}
+                    {block.type === 'turnRight' && <RotateCw className="w-4 h-4 text-white flex-shrink-0 group-hover:scale-110 transition-transform" />}
                     <div className="flex-1 min-w-0">
                       <span className="text-sm font-medium text-white block truncate">{block.label}</span>
                       <span className="text-xs text-blue-100 opacity-75">Motion control</span>
@@ -227,8 +232,8 @@ export default function BlockPalette() {
           <p className="text-xs text-text-muted text-center">
             {Object.values(blockTypes).flat().length} blocks available
           </p>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
 }

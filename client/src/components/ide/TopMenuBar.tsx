@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Play, Square, Bot, Save, Download, Upload, Zap, Eye, EyeOff, Sidebar, Palette, Terminal, Sparkles, Code2, MonitorPlay } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Play, Square, Bot, Save, Download, Upload, Zap, Eye, EyeOff, Sidebar, Palette, Terminal, Sparkles, Code2, MonitorPlay, BookOpen } from "lucide-react";
+import { Course } from "@/lib/courses";
 
 interface TopMenuBarProps {
   onToggleTestRunner?: () => void;
@@ -10,6 +12,10 @@ interface TopMenuBarProps {
   showFileExplorer?: boolean;
   showBlockPalette?: boolean;
   showConsole?: boolean;
+  courses: Course[];
+  courseCompletions: boolean[];
+  currentCourseIndex: number;
+  onSelectCourse: (index: number) => void;
 }
 
 export default function TopMenuBar({ 
@@ -20,7 +26,11 @@ export default function TopMenuBar({
   onToggleConsole,
   showFileExplorer = true,
   showBlockPalette = true,
-  showConsole = true
+  showConsole = true,
+  courses,
+  courseCompletions,
+  currentCourseIndex,
+  onSelectCourse
 }: TopMenuBarProps) {
   return (
     <header className="bg-gradient-to-r from-panel-bg via-panel-hover to-panel-bg border-b border-border-color px-6 py-3 flex items-center justify-between shadow-premium backdrop-blur-lg">
@@ -30,8 +40,7 @@ export default function TopMenuBar({
             <Bot className="text-white text-lg" />
           </div>
           <div>
-            <h1 className="font-bold text-xl text-text-primary tracking-tight">RobotIDE</h1>
-            <p className="text-xs text-text-muted leading-none">Professional Edition</p>
+            <h1 className="font-bold text-xl text-text-primary tracking-tight">NomadVerse</h1>
           </div>
         </div>
         
@@ -48,6 +57,30 @@ export default function TopMenuBar({
             </Button>
           ))}
         </nav>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Courses List
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {courses.map((course, index) => {
+              const isCompleted = courseCompletions[index];
+              const isCurrent = currentCourseIndex === index;
+              if (isCompleted || isCurrent) {
+                return (
+                  <DropdownMenuItem key={course.id} onSelect={() => onSelectCourse(index)}>
+                    {course.title}
+                  </DropdownMenuItem>
+                );
+              }
+              return null;
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
       </div>
       
       <div className="flex items-center space-x-3">

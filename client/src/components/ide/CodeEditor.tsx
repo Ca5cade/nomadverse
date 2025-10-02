@@ -3,54 +3,24 @@ import { Button } from "@/components/ui/button";
 import { Copy, Download, Play, Eye, EyeOff } from "lucide-react";
 import type { Project } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { generatePythonCode } from "@/lib/codeGenerator";
 
 interface CodeEditorProps {
   project?: Project;
   fullWidth?: boolean;
   readOnly?: boolean;
   code?: string;
+  height?: string;
 }
 
-export default function CodeEditor({ project, readOnly = false, fullWidth = false, code: providedCode }: CodeEditorProps) {
+export default function CodeEditor({ project, readOnly = false, fullWidth = false, code: providedCode, height }: CodeEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [isReadOnly, setIsReadOnly] = useState(readOnly);
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(providedCode || "");
 
-  // Generate code from project blocks when project changes
   useEffect(() => {
-    // Force code to appear - prioritize providedCode
-    if (providedCode && providedCode.trim() !== "") {
-      setCode(providedCode);
-      return;
-    }
-    
-    try {
-      if (project?.blocks && project.blocks.length > 0) {
-        const generatedCode = generatePythonCode(project.blocks);
-        if (generatedCode && generatedCode.trim() !== "") {
-          setCode(generatedCode);
-          return;
-        }
-      }
-    } catch (error) {
-      console.error("Error generating code:", error);
-    }
-    
-    // Always fall back to default code
-    setCode(`# Robot Program
-# Add some blocks in Visual Programming mode to generate code here
-
-def main():
-    """Main robot program"""
-    # Your robot commands will appear here
-    pass
-
-if __name__ == "__main__":
-    main()
-`);
-  }, [project?.blocks, project, providedCode]);
+    setCode(providedCode || "");
+  }, [providedCode]);
 
   const handleCopyCode = async () => {
     try {
@@ -80,16 +50,8 @@ if __name__ == "__main__":
     URL.revokeObjectURL(url);
   };
 
-  if (!project) {
-    return (
-      <div className="h-full flex items-center justify-center bg-editor-bg">
-        <p className="text-text-muted">No project selected</p>
-      </div>
-    );
-  }
-
   return (
-    <div className={`bg-editor-bg border-l border-border-color flex flex-col ${fullWidth ? 'flex-1' : 'w-96'}`}>
+    <div className={`bg-editor-bg border-l border-border-color flex flex-col ${fullWidth ? 'flex-1' : 'w-96'} ${height || ''}`}>
       <div className="bg-panel-bg px-4 py-2 border-b border-border-color flex items-center justify-between">
         <span className="text-sm font-medium text-text-primary">
           {fullWidth ? "Python Editor" : "Generated Python"}
@@ -135,14 +97,14 @@ if __name__ == "__main__":
         </div>
       </div>
 
-      <div className="flex-1 relative bg-gray-900">
+      <div className="flex-1 bg-gray-900 overflow-auto">
         {isReadOnly ? (
           <div
             ref={editorRef}
-            className="absolute inset-0 p-4 overflow-auto font-mono text-sm bg-gray-900 text-white"
+            className="p-4 font-mono text-sm bg-gray-900 text-white h-full"
             data-testid="code-editor"
           >
-            <pre className="text-white leading-relaxed whitespace-pre-wrap">
+            <pre className="text-white leading-relaxed whitespace-pre-wrap h-full">
               {code.split('\n').map((line, index) => (
                 <div key={index} className="min-h-[1.25rem] flex">
                   <span className="text-gray-400 w-8 text-right mr-4 select-none">
@@ -178,7 +140,7 @@ if __name__ == "__main__":
           </div>
         ) : (
           <textarea
-            className="absolute inset-0 p-4 w-full h-full bg-gray-900 text-white font-mono text-sm resize-none border-none outline-none"
+            className="absolute inset-0 p-4 w-full h-full bg-gray-900 text-white font-mono text-sm resize-auto border-none outline-none"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             placeholder="Edit Python code here..."
@@ -189,10 +151,6 @@ if __name__ == "__main__":
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <p className="text-gray-400 mb-2">No code to display. Create some blocks to generate code.</p>
-              <p className="text-xs text-gray-500">
-                Debug: providedCode={providedCode ? 'present' : 'null'}, 
-                project blocks={project?.blocks?.length || 0}
-              </p>
             </div>
           </div>
         )}

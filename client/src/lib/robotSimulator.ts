@@ -1,19 +1,7 @@
 import * as THREE from 'three';
-import { Block } from "@shared/schema";
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-
-export interface RobotState {
-  position: { x: number; y: number; z: number };
-  rotation: { x: number; y: number; z: number };
-  isMoving: boolean;
-  speed: number;
-}
-
-export interface SimulationCommand {
-  type: 'move_forward' | 'move_backward' | 'turn_left' | 'turn_right' | 'wait';
-  value: number;
-  delay: number;
-}
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { Simulation, RobotState, SimulationCommand } from './simulation';
 
 export class RobotSimulator {
   private container: HTMLElement;
@@ -24,40 +12,33 @@ export class RobotSimulator {
   private robotMesh!: THREE.Mesh;
   private animationId: number | null = null;
   private controls!: OrbitControls;
+  private simulation: Simulation;
 
-  private robotState: RobotState;
-  private commands: SimulationCommand[] = [];
-  private isRunning: boolean = false;
-  private onStateChange: (state: RobotState) => void;
-  private onCommandComplete: (command: SimulationCommand) => void;
-  private simulationSpeed: number = 1.0;
+  private onCourseComplete: () => void;
 
-  constructor(
-    container: HTMLElement,
-    onStateChange: (state: RobotState) => void,
-    onCommandComplete?: (command: SimulationCommand) => void
-  ) {
+  private obstacles: { position: { x: number; y: number; z: number }; size: { x: number; y: number; z: number } }[] = [];
+
+  constructor(container: HTMLElement, onCourseComplete: () => void, obstacles?: { position: { x: number; y: number; z: number }; size: { x: number; y: number; z: number } }[]) {
     this.container = container;
-    this.robotState = {
-      position: { x: 0, y: 0, z: 0 },
-      rotation: { x: 0, y: 0, z: 0 },
-      isMoving: false,
-      speed: 1.0,
-    };
-    this.onStateChange = onStateChange;
-    this.onCommandComplete = onCommandComplete || (() => {});
-
+    this.onCourseComplete = onCourseComplete;
+    if (obstacles) {
+      this.obstacles = obstacles;
+    }
     this.initThreeJS();
     this.createRobot();
     this.createEnvironment();
     this.setupLighting();
-    this.animate();
     this.handleResize();
+
+    this.simulation = new Simulation(
+      this.handleStateChange,
+      this.handleCommandComplete
+    );
   }
 
   private initThreeJS() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x1a1a2e);
+    this.scene.background = null;
 
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
@@ -80,78 +61,103 @@ export class RobotSimulator {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    // Append the renderer's canvas to the container
     this.container.appendChild(this.renderer.domElement);
 
-    // Initialize OrbitControls for smoother camera interaction
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enableDamping = true; // Enables smooth damping
-    this.controls.dampingFactor = 0.05; // Adjust this value for smoothness
+    this.controls.enableDamping = true;
+    this.controls.dampingFactor = 0.05;
     this.controls.screenSpacePanning = false;
-    this.controls.target.set(0, 0, 0); // Set initial target to origin
+    this.controls.target.set(0, 0, 0);
   }
 
   private createRobot() {
     this.robot = new THREE.Group();
 
-    const bodyGeometry = new THREE.BoxGeometry(1, 0.5, 1.5);
-    const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x4299ff });
+    const bodyGeometry = new THREE.CapsuleGeometry(0.4, 0.6, 4, 8);
+    const bodyMaterial = new THREE.MeshStandardMaterial({
+      color: 0x00ff00,
+      metalness: 0.8,
+      roughness: 0.2,
+      envMapIntensity: 0.8,
+    });
     this.robotMesh = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    this.robotMesh.position.y = 0.25;
+    this.robotMesh.position.y = 0.5;
     this.robotMesh.castShadow = true;
     this.robot.add(this.robotMesh);
 
-    const eyeGeometry = new THREE.SphereGeometry(0.1, 8, 8);
-    const eyeMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    const headGeometry = new THREE.SphereGeometry(0.3, 32, 16);
+    const headMaterial = new THREE.MeshStandardMaterial({
+      color: 0x00ffff,
+      metalness: 0.7,
+      roughness: 0.3,
+    });
+    const head = new THREE.Mesh(headGeometry, headMaterial);
+    head.position.y = 1.2;
+    head.castShadow = true;
+    this.robot.add(head);
 
-    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    leftEye.position.set(-0.2, 0.4, 0.6);
-    this.robot.add(leftEye);
+    const eyeGeometry = new THREE.SphereGeometry(0.1, 16, 8);
+    const eyeMaterial = new THREE.MeshStandardMaterial({
+      color: 0xff0000,
+      emissive: 0xff0000,
+      emissiveIntensity: 1,
+    });
+    const eye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    eye.position.set(0, 1.25, 0.25);
+    this.robot.add(eye);
 
-    const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    rightEye.position.set(0.2, 0.4, 0.6);
-    this.robot.add(rightEye);
-
-    const wheelGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 8);
-    const wheelMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+    const wheelGeometry = new THREE.TorusGeometry(0.25, 0.1, 16, 32);
+    const wheelMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffff00,
+      metalness: 0.9,
+      roughness: 0.5,
+    });
 
     const leftWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-    leftWheel.position.set(-0.6, 0.2, 0);
-    leftWheel.rotation.z = Math.PI / 2;
+    leftWheel.position.set(-0.6, 0.3, 0);
+    leftWheel.rotation.y = Math.PI / 2;
     this.robot.add(leftWheel);
 
     const rightWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-    rightWheel.position.set(0.6, 0.2, 0);
-    rightWheel.rotation.z = Math.PI / 2;
+    rightWheel.position.set(0.6, 0.3, 0);
+    rightWheel.rotation.y = Math.PI / 2;
     this.robot.add(rightWheel);
 
+    this.robot.scale.set(0.5, 0.5, 0.5);
     this.scene.add(this.robot);
   }
 
   private createEnvironment() {
-    const floorGeometry = new THREE.PlaneGeometry(50, 50);
-    const floorMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    this.scene.add(floor);
-
-    const gridHelper = new THREE.GridHelper(50, 50, 0x888888, 0x444444);
+    const gridHelper = new THREE.GridHelper(100, 100);
     this.scene.add(gridHelper);
 
-    const obstacleGeometry = new THREE.BoxGeometry(1, 1, 1);
-    const obstacleMaterial = new THREE.MeshLambertMaterial({ color: 0xff6b6b });
+    const groundGeometry = new THREE.PlaneGeometry(100, 100);
+    const groundMaterial = new THREE.MeshStandardMaterial({
+      color: 0x808080,
+      metalness: 0.2,
+      roughness: 0.8,
+    });
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    this.scene.add(ground);
 
-    for (let i = 0; i < 5; i++) {
+    // Add a finish line
+    const finishLineGeometry = new THREE.BoxGeometry(0.1, 1, 10);
+    const finishLineMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+    const finishLine = new THREE.Mesh(finishLineGeometry, finishLineMaterial);
+    finishLine.position.set(10, 0.5, 0);
+    this.scene.add(finishLine);
+
+    // Add obstacles
+    this.obstacles.forEach(obstacleData => {
+      const obstacleGeometry = new THREE.BoxGeometry(obstacleData.size.x, obstacleData.size.y, obstacleData.size.z);
+      const obstacleMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
       const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
-      obstacle.position.set(
-        (Math.random() - 0.5) * 20,
-        0.5,
-        (Math.random() - 0.5) * 20
-      );
+      obstacle.position.set(obstacleData.position.x, obstacleData.position.y, obstacleData.position.z);
       obstacle.castShadow = true;
       this.scene.add(obstacle);
-    }
+    });
   }
 
   private setupLighting() {
@@ -166,18 +172,16 @@ export class RobotSimulator {
     this.scene.add(directionalLight);
   }
 
-  private animate = () => {
-    if (this.animationId) {
-      cancelAnimationFrame(this.animationId);
-    }
+  private courseCompleted = false;
 
-    this.animationId = requestAnimationFrame(this.animate);
-
-    // Update camera controls for smooth movement and interaction
+  public animate = () => {
     this.controls.update();
-
-    // Render the scene
     this.renderer.render(this.scene, this.camera);
+
+    if (!this.courseCompleted && this.robot.position.x > 10) {
+      this.courseCompleted = true;
+      this.onCourseComplete();
+    }
   }
 
   private handleResize = () => {
@@ -189,7 +193,6 @@ export class RobotSimulator {
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(width, height);
-        // Update controls on resize to maintain correct aspect ratio
         this.controls.update();
       }
     });
@@ -197,236 +200,147 @@ export class RobotSimulator {
     resizeObserver.observe(this.container);
   }
 
-  public generateCommandsFromBlocks(blocks: Block[]): SimulationCommand[] {
-    const commands: SimulationCommand[] = [];
-
-    const startBlock = blocks.find(b => b.type === 'when_flag_clicked');
-    if (startBlock) {
-      this.processBlock(startBlock, blocks, commands);
-    }
-
-    blocks.forEach(block => {
-      if (block.type !== 'when_flag_clicked' && !this.isChildBlock(block, blocks)) {
-        this.processBlock(block, blocks, commands);
-      }
-    });
-
-    return commands;
+  private handleStateChange = (state: RobotState) => {
+    this.robot.position.set(state.position.x, state.position.y, state.position.z);
+    this.robot.rotation.set(state.rotation.x, state.rotation.y, state.rotation.z);
   }
 
-  private isChildBlock(block: Block, allBlocks: Block[]): boolean {
-    return allBlocks.some(b => b.children?.includes(block.id));
-  }
-
-  private processBlock(block: Block, allBlocks: Block[], commands: SimulationCommand[]): void {
-    switch (block.type) {
-      case 'move_forward':
-        commands.push({
-          type: 'move_forward',
-          value: block.inputs?.steps || 10,
-          delay: 1000 / this.simulationSpeed
-        });
-        break;
-
-      case 'move_backward':
-        commands.push({
-          type: 'move_backward',
-          value: block.inputs?.steps || 10,
-          delay: 1000 / this.simulationSpeed
-        });
-        break;
-
-      case 'turn_left':
-        commands.push({
-          type: 'turn_left',
-          value: block.inputs?.degrees || 90,
-          delay: 800 / this.simulationSpeed
-        });
-        break;
-
-      case 'turn_right':
-        commands.push({
-          type: 'turn_right',
-          value: block.inputs?.degrees || 90,
-          delay: 800 / this.simulationSpeed
-        });
-        break;
-
-      case 'wait':
-        commands.push({
-          type: 'wait',
-          value: block.inputs?.seconds || 1,
-          delay: (block.inputs?.seconds || 1) * 1000 / this.simulationSpeed
-        });
-        break;
-
-      case 'repeat':
-        const times = block.inputs?.times || 10;
-        for (let i = 0; i < times; i++) {
-          if (block.children) {
-            block.children.forEach(childId => {
-              const childBlock = allBlocks.find(b => b.id === childId);
-              if (childBlock) {
-                this.processBlock(childBlock, allBlocks, commands);
-              }
-            });
-          }
-        }
-        break;
-    }
-  }
-
-  public executeCommands(commands: SimulationCommand[]): void {
-    this.commands = [...commands];
-    this.isRunning = true;
-    this.executeNextCommand();
-  }
-
-  private executeNextCommand(): void {
-    if (this.commands.length === 0 || !this.isRunning) {
-      this.isRunning = false;
-      this.robotState.isMoving = false;
-      this.onStateChange(this.robotState);
-      return;
-    }
-
-    const command = this.commands.shift()!;
-    this.executeCommand(command);
-  }
-
-  private executeCommand(command: SimulationCommand): void {
-    this.robotState.isMoving = true;
-    this.onStateChange(this.robotState);
-
+  private handleCommandComplete = (command: SimulationCommand) => {
+    console.log('Processing command:', command); // Added for debugging
     switch (command.type) {
-      case 'move_forward':
+      case 'moveForward':
         this.smoothMoveRobot(command.value, command.delay);
         break;
-      case 'move_backward':
+      case 'moveBackward':
         this.smoothMoveRobot(-command.value, command.delay);
         break;
-      case 'turn_left':
+      case 'turnLeft':
         this.smoothRotateRobot(-command.value, command.delay);
         break;
-      case 'turn_right':
+      case 'turnRight':
         this.smoothRotateRobot(command.value, command.delay);
         break;
       case 'wait':
         setTimeout(() => {
-          this.robotState.isMoving = false;
-          this.onCommandComplete(command);
-          this.onStateChange(this.robotState);
-          this.executeNextCommand();
+          this.simulation.executeNextCommand();
         }, command.delay);
-        return;
+        break;
     }
   }
 
+  private checkCollisions(): boolean {
+    const robotBoundingBox = new THREE.Box3().setFromObject(this.robot);
+
+    for (const obstacle of this.scene.children) {
+      if (obstacle !== this.robot && obstacle.castShadow) {
+        const obstacleBoundingBox = new THREE.Box3().setFromObject(obstacle);
+        if (robotBoundingBox.intersectsBox(obstacleBoundingBox)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   private smoothMoveRobot(distance: number, duration: number): void {
+    console.log('Smooth moving robot: distance=', distance, 'duration=', duration); // Added for debugging
     const startPosition = this.robot.position.clone();
     const direction = new THREE.Vector3(0, 0, distance * 0.1);
     direction.applyQuaternion(this.robot.quaternion);
     const targetPosition = startPosition.clone().add(direction);
-    
+
     const startTime = performance.now();
-    
+
     const animate = () => {
       const elapsed = performance.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
-      // Use easeInOutCubic for smoother movement
-      const easedProgress = progress < 0.5 
-        ? 4 * progress * progress * progress 
+
+      const easedProgress = progress < 0.5
+        ? 4 * progress * progress * progress
         : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-      
-      this.robot.position.lerpVectors(startPosition, targetPosition, easedProgress);
-      
-      this.robotState.position = {
+
+      const newPosition = new THREE.Vector3().lerpVectors(startPosition, targetPosition, easedProgress);
+      const oldPosition = this.robot.position.clone();
+      this.robot.position.copy(newPosition);
+
+      if (this.checkCollisions()) {
+        this.robot.position.copy(oldPosition);
+        this.simulation.executeNextCommand();
+        return;
+      }
+
+      this.simulation.getRobotState().position = {
         x: this.robot.position.x,
         y: this.robot.position.y,
         z: this.robot.position.z
       };
-      this.onStateChange(this.robotState);
-      
+      this.simulation.onStateChange(this.simulation.getRobotState());
+
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
-        this.robotState.isMoving = false;
-        this.onCommandComplete({ type: 'move_forward', value: distance, delay: duration });
-        this.onStateChange(this.robotState);
-        this.executeNextCommand();
+        this.simulation.executeNextCommand();
       }
     };
-    
+
     animate();
   }
 
   private smoothRotateRobot(degrees: number, duration: number): void {
+    console.log('Smooth rotating robot: degrees=', degrees, 'duration=', duration); // Added for debugging
     const startRotation = this.robot.rotation.y;
     const radians = (degrees * Math.PI) / 180;
     const targetRotation = startRotation + radians;
-    
+
     const startTime = performance.now();
-    
+
     const animate = () => {
       const elapsed = performance.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
-      // Use easeInOutCubic for smoother rotation
-      const easedProgress = progress < 0.5 
-        ? 4 * progress * progress * progress 
+
+      const easedProgress = progress < 0.5
+        ? 4 * progress * progress * progress
         : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-      
+
       this.robot.rotation.y = startRotation + (targetRotation - startRotation) * easedProgress;
-      
-      this.robotState.rotation = {
+
+      this.simulation.getRobotState().rotation = {
         x: this.robot.rotation.x,
         y: this.robot.rotation.y,
         z: this.robot.rotation.z
       };
-      this.onStateChange(this.robotState);
-      
+      this.simulation.onStateChange(this.simulation.getRobotState());
+
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
-        this.robotState.isMoving = false;
-        this.onCommandComplete({ type: 'turn_right', value: degrees, delay: duration });
-        this.onStateChange(this.robotState);
-        this.executeNextCommand();
+        this.simulation.executeNextCommand();
       }
     };
-    
+
     animate();
   }
 
-  public setSpeed(speed: number): void {
-    this.simulationSpeed = Math.max(0.1, Math.min(3.0, speed));
-    this.robotState.speed = this.simulationSpeed;
-  }
-
-  public reset(): void {
-    this.robot.position.set(0, 0, 0);
-    this.robot.rotation.set(0, 0, 0);
-    this.robotState = {
-      position: { x: 0, y: 0, z: 0 },
-      rotation: { x: 0, y: 0, z: 0 },
-      isMoving: false,
-      speed: this.simulationSpeed,
-    };
-    this.onStateChange(this.robotState);
+  public executeCommands(blocks: any[]): void {
+    const commands = this.simulation.generateCommandsFromBlocks(blocks);
+    this.simulation.executeCommands(commands);
   }
 
   public pause(): void {
-    this.isRunning = false;
-    this.robotState.isMoving = false;
-    this.onStateChange(this.robotState);
+    this.simulation.pause();
   }
 
-  public stop(): void {
-    this.isRunning = false;
-    this.commands = [];
-    this.robotState.isMoving = false;
-    this.onStateChange(this.robotState);
+  public setSpeed(speed: number): void {
+    this.simulation.setSpeed(speed);
+  }
+
+  public reset(): void {
+    this.simulation.reset();
+  }
+
+  public softReset(): void {
+    this.simulation.softReset();
   }
 
   public setViewMode(mode: '3d' | 'top' | 'side'): void {
@@ -444,45 +358,53 @@ export class RobotSimulator {
         this.controls.target.set(0, 0, 0);
         break;
     }
-    this.camera.lookAt(this.controls.target); // Ensure camera looks at the target
+    this.camera.lookAt(this.controls.target);
   }
 
-  // Method to get the robot mesh for external use (e.g., for camera following)
   public getRobotMesh(): THREE.Mesh {
     return this.robotMesh;
   }
 
-  // Method to make the camera follow the robot smoothly
+  public setModel(model: THREE.Object3D) {
+    if (this.robot) {
+      this.scene.remove(this.robot);
+    }
+    this.robot = new THREE.Group();
+    this.robot.add(model);
+    this.scene.add(this.robot);
+  }
+
+  public loadModel(url: string) {
+    const loader = new GLTFLoader();
+    loader.load(
+      url,
+      (gltf) => {
+        this.setModel(gltf.scene);
+      },
+      undefined,
+      (error) => {
+        console.error('An error happened while loading the model.', error);
+      }
+    );
+  }
+
   public followRobotSmooth(robotPosition: THREE.Vector3) {
     if (!this.camera || !this.controls) return;
 
-    // Define the target position for the camera, offset from the robot
     const targetPosition = new THREE.Vector3(
-      robotPosition.x + 5, // Offset X
-      robotPosition.y + 8, // Offset Y for a better view angle
-      robotPosition.z + 5  // Offset Z
+      robotPosition.x + 5,
+      robotPosition.y + 8,
+      robotPosition.z + 5
     );
 
-    // Smoothly interpolate the camera's position towards the target position
-    this.camera.position.lerp(targetPosition, 0.05); // 0.05 is the interpolation factor for smoothness
+    this.camera.position.lerp(targetPosition, 0.05);
 
-    // Smoothly interpolate the controls' target to follow the robot's position
     const currentTarget = this.controls.target.clone();
     const targetLookAt = new THREE.Vector3(robotPosition.x, robotPosition.y, robotPosition.z);
-    currentTarget.lerp(targetLookAt, 0.08); // 0.08 is the interpolation factor for target smoothness
+    currentTarget.lerp(targetLookAt, 0.08);
     this.controls.target.copy(currentTarget);
 
-    // Ensure the camera always looks at the updated target
     this.camera.lookAt(this.controls.target);
-  }
-
-  public getStats(): { fps: number; position: { x: number; y: number; z: number }; rotation: number; commands: number } {
-    return {
-      fps: 60, // This is a placeholder, actual FPS calculation would be more complex
-      position: this.robotState.position,
-      rotation: this.robotState.rotation.y * (180 / Math.PI),
-      commands: this.commands.length
-    };
   }
 
   public cleanup(): void {

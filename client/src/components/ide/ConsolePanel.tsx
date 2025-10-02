@@ -17,7 +17,7 @@ export default function ConsolePanel() {
       id: '1',
       timestamp: new Date(),
       level: 'success',
-      message: 'RobotIDE Professional Edition initialized successfully',
+      message: 'NomadVerse Professional Edition initialized successfully',
       source: 'System'
     },
     {

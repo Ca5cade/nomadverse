@@ -106,6 +106,10 @@
     @apply font-sans antialiased bg-background text-foreground;
     font-family: var(--font-interface);
   }
+
+  #root {
+    height: 100vh;
+  }
   
   .font-code {
     font-family: var(--font-code);
@@ -161,4 +165,27 @@
 .hover-lift:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-xl);
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  10% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  90% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+.fade-in-out {
+  animation: fadeInOut 5s ease-in-out forwards;
 }
