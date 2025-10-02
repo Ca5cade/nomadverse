@@ -1,10 +1,40 @@
+import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
+import session from 'express-session';
+import passport from './auth';
+import connectPgSimple from 'connect-pg-simple';
+import { Pool } from 'pg';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET environment variable is not set");
+}
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Session middleware setup
+const PgStore = connectPgSimple(session);
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+app.use(session({
+  store: new PgStore({
+    pool: pool,
+    tableName: 'user_sessions' // Name of the session table
+  }),
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 } // 30 days
+}));
+
+// Passport middleware setup
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use((req, res, next) => {
   const start = Date.now();

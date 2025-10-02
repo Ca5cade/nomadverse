@@ -3,8 +3,16 @@ import { pgTable, text, varchar, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  hashedPassword: text("hashed_password").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   name: text("name").notNull(),
   description: text("description"),
   blocks: jsonb("blocks").default('[]'),
@@ -16,17 +24,27 @@ export const projects = pgTable("projects", {
 
 export const files = pgTable("files", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  projectId: varchar("project_id").references(() => projects.id).notNull(),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
   name: text("name").notNull(),
   type: text("type").notNull(), // 'python', 'blocks', 'scene'
   content: text("content").default(''),
   path: text("path").notNull(),
 });
 
+// Schema for inserting a user - Zod validation
+export const insertUserSchema = createInsertSchema(users, {
+  email: z.string().email({ message: "Invalid email address" }),
+  hashedPassword: z.string().min(8, { message: "Password must be at least 8 characters long" }),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  userId: true, // userId will be inferred from the session, not from the client request
 });
 
 export const insertFileSchema = createInsertSchema(files).omit({
@@ -64,3 +82,5 @@ export type InsertFile = z.infer<typeof insertFileSchema>;
 export type File = typeof files.$inferSelect;
 export type Block = z.infer<typeof blockSchema>;
 export type SceneConfig = z.infer<typeof sceneConfigSchema>;
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;

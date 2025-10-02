@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Play, Square, Bot, Save, Download, Upload, Zap, Eye, EyeOff, Sidebar, Palette, Terminal, Sparkles, Code2, MonitorPlay, BookOpen } from "lucide-react";
+import { Play, Square, Bot, Save, Download, Upload, Zap, Eye, EyeOff, Sidebar, Palette, Terminal, Sparkles, Code2, MonitorPlay, BookOpen, LogOut } from "lucide-react";
 import { Course } from "@/lib/courses";
+import { useAuth } from "../../hooks/use-auth";
 
 interface TopMenuBarProps {
   onToggleTestRunner?: () => void;
@@ -32,6 +33,8 @@ export default function TopMenuBar({
   currentCourseIndex,
   onSelectCourse
 }: TopMenuBarProps) {
+  const { user, logout } = useAuth();
+
   return (
     <header className="bg-gradient-to-r from-panel-bg via-panel-hover to-panel-bg border-b border-border-color px-6 py-3 flex items-center justify-between shadow-premium backdrop-blur-lg">
       <div className="flex items-center space-x-6">
@@ -128,6 +131,23 @@ export default function TopMenuBar({
             <Terminal className="w-3.5 h-3.5" />
           </Button>
         </div>
+        
+        <div className="w-px h-6 bg-border-color mx-2" />
+
+        {user && (
+          <div className="flex items-center space-x-3">
+            <span className="text-sm font-medium text-text-secondary">{user.email}</span>
+            <Button 
+              variant="ghost"
+              size="sm"
+              onClick={logout}
+              className="hover:bg-panel-active text-text-secondary hover:text-text-primary transition-all hover:scale-105 shadow-sm"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
         
         <div className="w-px h-6 bg-border-color mx-2" />
         
