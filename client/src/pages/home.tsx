@@ -21,12 +21,14 @@ import CourseDisplay from "@/components/ide/CourseDisplay";
 import { courses, Course } from "@/lib/courses";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+import { useIsTablet } from "@/hooks/use-tablet";
 
 export default function HomePage() {
+  const isTablet = useIsTablet();
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [showTestRunner, setShowTestRunner] = useState(false);
   const [simulationTrigger, setSimulationTrigger] = useState(0);
-  const [showFileExplorer, setShowFileExplorer] = useState(true);
+  const [showFileExplorer, setShowFileExplorer] = useState(false);
   const [showConsole, setShowConsole] = useState(true);
   const { data: projects, isLoading } = useProjects();
   const createProject = useCreateProject();
@@ -212,7 +214,7 @@ export default function HomePage() {
         logout={logout}
       />
 
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
+      <ResizablePanelGroup direction={isTablet ? "vertical" : "horizontal"} className="flex-1">
         {showFileExplorer && (
           <>
             <ResizablePanel defaultSize={15} minSize={10}>
@@ -227,7 +229,7 @@ export default function HomePage() {
 
         <ResizablePanel defaultSize={showFileExplorer ? 85 : 100}>
           {programmingMode === 'visual' ? (
-            <ResizablePanelGroup direction="horizontal">
+            <ResizablePanelGroup direction={isTablet ? "vertical" : "horizontal"}>
               {/* Visual Programming Panel */}
               <ResizablePanel defaultSize={50}>
                 <ResizablePanelGroup direction="horizontal">

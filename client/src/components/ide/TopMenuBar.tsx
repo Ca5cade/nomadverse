@@ -21,6 +21,8 @@ interface TopMenuBarProps {
   logout?: () => void;
 }
 
+import { useIsTablet } from "@/hooks/use-tablet";
+
 export default function TopMenuBar({ 
   onToggleTestRunner, 
   onRunSimulation, 
@@ -37,6 +39,8 @@ export default function TopMenuBar({
   user,
   logout
 }: TopMenuBarProps) {
+  const isTablet = useIsTablet();
+
   return (
     <header className="bg-gradient-to-r from-panel-bg via-panel-hover to-panel-bg border-b border-border-color px-6 py-3 flex items-center justify-between shadow-premium backdrop-blur-lg">
       <div className="flex items-center space-x-6">
@@ -48,26 +52,14 @@ export default function TopMenuBar({
             <h1 className="font-bold text-xl text-text-primary tracking-tight">NomadVerse</h1>
           </div>
         </div>
-        
-        <nav className="flex space-x-1">
-          {['File', 'Edit', 'View', 'Run', 'Help'].map((item) => (
-            <Button 
-              key={item}
-              variant="ghost" 
-              size="sm" 
-              className="hover:bg-panel-active text-text-primary transition-all hover:scale-105 font-medium"
-              data-testid={`menu-${item.toLowerCase()}`}
-            >
-              {item}
-            </Button>
-          ))}
-        </nav>
-
+      </div>
+      
+      <div className="flex items-center space-x-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline">
               <BookOpen className="w-4 h-4 mr-2" />
-              Courses List
+              {!isTablet && <span>Courses List</span>}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
@@ -86,53 +78,65 @@ export default function TopMenuBar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-      </div>
-      
-      <div className="flex items-center space-x-3">
-        <div className="flex items-center space-x-1 bg-panel-active rounded-lg p-1.5 border border-border-color shadow-sm">
-          <Button 
-            variant="ghost"
-            size="sm"
-            className={`h-8 w-8 p-0 transition-all duration-200 ${
-              showFileExplorer 
-                ? 'bg-accent-blue text-white shadow-md transform scale-105' 
-                : 'text-text-muted hover:text-text-primary hover:bg-panel-hover'
-            }`}
-            onClick={onToggleFileExplorer}
-            title="Toggle File Explorer"
-            data-testid="button-toggle-files"
-          >
-            <Sidebar className="w-3.5 h-3.5" />
-          </Button>
-          <Button 
-            variant="ghost"
-            size="sm"
-            className={`h-8 w-8 p-0 transition-all duration-200 ${
-              showBlockPalette 
-                ? 'bg-accent-purple text-white shadow-md transform scale-105' 
-                : 'text-text-muted hover:text-text-primary hover:bg-panel-hover'
-            }`}
-            onClick={onToggleBlockPalette}
-            title="Toggle Block Palette"
-            data-testid="button-toggle-blocks"
-          >
-            <Palette className="w-3.5 h-3.5" />
-          </Button>
-          <Button 
-            variant="ghost"
-            size="sm"
-            className={`h-8 w-8 p-0 transition-all duration-200 ${
-              showConsole 
-                ? 'bg-accent-green text-white shadow-md transform scale-105' 
-                : 'text-text-muted hover:text-text-primary hover:bg-panel-hover'
-            }`}
-            onClick={onToggleConsole}
-            title="Toggle Console"
-            data-testid="button-toggle-console"
-          >
-            <Terminal className="w-3.5 h-3.5" />
-          </Button>
-        </div>
+        {isTablet ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Eye className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={onToggleFileExplorer}>Toggle File Explorer</DropdownMenuItem>
+              <DropdownMenuItem onClick={onToggleBlockPalette}>Toggle Block Palette</DropdownMenuItem>
+              <DropdownMenuItem onClick={onToggleConsole}>Toggle Console</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div className="flex items-center space-x-1 bg-panel-active rounded-lg p-1.5 border border-border-color shadow-sm">
+            <Button 
+              variant="ghost"
+              size="sm"
+              className={`h-8 w-8 p-0 transition-all duration-200 ${
+                showFileExplorer 
+                  ? 'bg-accent-blue text-white shadow-md transform scale-105' 
+                  : 'text-text-muted hover:text-text-primary hover:bg-panel-hover'
+              }`}
+              onClick={onToggleFileExplorer}
+              title="Toggle File Explorer"
+              data-testid="button-toggle-files"
+            >
+              <Sidebar className="w-3.5 h-3.5" />
+            </Button>
+            <Button 
+              variant="ghost"
+              size="sm"
+              className={`h-8 w-8 p-0 transition-all duration-200 ${
+                showBlockPalette 
+                  ? 'bg-accent-purple text-white shadow-md transform scale-105' 
+                  : 'text-text-muted hover:text-text-primary hover:bg-panel-hover'
+              }`}
+              onClick={onToggleBlockPalette}
+              title="Toggle Block Palette"
+              data-testid="button-toggle-blocks"
+            >
+              <Palette className="w-3.5 h-3.5" />
+            </Button>
+            <Button 
+              variant="ghost"
+              size="sm"
+              className={`h-8 w-8 p-0 transition-all duration-200 ${
+                showConsole 
+                  ? 'bg-accent-green text-white shadow-md transform scale-105' 
+                  : 'text-text-muted hover:text-text-primary hover:bg-panel-hover'
+              }`}
+              onClick={onToggleConsole}
+              title="Toggle Console"
+              data-testid="button-toggle-console"
+            >
+              <Terminal className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        )}
         
         <div className="w-px h-6 bg-border-color mx-2" />
         
@@ -152,10 +156,10 @@ export default function TopMenuBar({
 
         {user && (
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-text-secondary font-medium">{user.email}</span>
+            {!isTablet && <span className="text-sm text-text-secondary font-medium">{user.email}</span>}
             <Button variant="ghost" size="sm" onClick={logout} className="text-text-secondary hover:text-text-primary">
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
+              <LogOut className="w-4 h-4" />
+              {!isTablet && <span className="ml-2">Logout</span>}
             </Button>
           </div>
         )}
