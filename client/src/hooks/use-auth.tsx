@@ -82,15 +82,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const loginMutation = useMutation({
     mutationFn: loginUser,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] });
+    onSuccess: (data) => {
+      queryClient.setQueryData(['user'], data);
     },
   });
 
   const registerMutation = useMutation({
     mutationFn: registerUser,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] });
+    onSuccess: (data) => {
+      queryClient.setQueryData(['user'], data);
     },
   });
 

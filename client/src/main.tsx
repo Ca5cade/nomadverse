@@ -7,6 +7,8 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { Switch, Route, Redirect } from "wouter";
 import HomePage from "@/pages/home";
 import LandingPage from "@/pages/landing";
+import LoginPage from "@/pages/Login";
+import RegisterPage from "@/pages/Register";
 import CertificatePage from "@/pages/certificate";
 
 
@@ -25,6 +27,8 @@ function AppRouter() {
   return (
     <Switch>
       <Route path="/" component={LandingPage} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/register" component={RegisterPage} />
       <ProtectedRoute path="/home" component={HomePage} />
       <ProtectedRoute path="/certificate" component={CertificatePage} />
       <Route path="/:rest*">
