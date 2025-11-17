@@ -8,6 +8,9 @@ import passport from "./auth";
 
 const app = express();
 
+// Define custom MIME type for GLB files
+express.static.mime.define({'model/gltf-binary': ['glb']});
+
 // Session store setup
 const PgStore = connectPgSimple(session);
 const sessionStore = new PgStore({
