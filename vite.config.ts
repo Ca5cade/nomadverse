@@ -16,6 +16,7 @@ export default defineConfig({
         ]
       : []),
   ],
+  assetsInclude: ['**/*.glb'], // Add this line
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
