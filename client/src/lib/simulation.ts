@@ -15,6 +15,7 @@ export interface SimulationCommand {
 
 export class Simulation {
   private robotState: RobotState;
+  private initialState: RobotState; // Store the initial state
   private commands: SimulationCommand[] = [];
   private isRunning: boolean = false;
   private onStateChange: (state: RobotState) => void;
@@ -31,8 +32,25 @@ export class Simulation {
       isMoving: false,
       speed: 1.0,
     };
+    // Deep copy the initial state to preserve it
+    this.initialState = JSON.parse(JSON.stringify(this.robotState));
     this.onStateChange = onStateChange;
     this.onCommandComplete = onCommandComplete || (() => {});
+  }
+
+  /**
+   * Updates the initial state of the simulation, which is used on reset.
+   * This is useful for setting the correct starting height of a model.
+   */
+  public setInitialState(config: { position?: { y: number }; rotation?: { y: number } }) {
+    if (config.position) {
+      this.initialState.position.y = config.position.y;
+    }
+    if (config.rotation) {
+      this.initialState.rotation.y = config.rotation.y;
+    }
+    // Apply this new initial state immediately
+    this.reset();
   }
 
   public generateCommandsFromBlocks(blocks: Block[]): SimulationCommand[] {
@@ -144,12 +162,8 @@ export class Simulation {
   }
 
   public reset(): void {
-    this.robotState = {
-      position: { x: 0, y: 0, z: 0 },
-      rotation: { x: 0, y: 0, z: 0 },
-      isMoving: false,
-      speed: this.simulationSpeed,
-    };
+    // Reset to a deep copy of the initial state
+    this.robotState = JSON.parse(JSON.stringify(this.initialState));
     this.onStateChange(this.robotState);
   }
 

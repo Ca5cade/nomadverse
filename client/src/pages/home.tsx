@@ -22,6 +22,8 @@ import { courses, Course } from "@/lib/courses";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useIsTablet } from "@/hooks/use-tablet";
+import { useToast } from "@/hooks/use-toast";
+import { CHARACTERS } from "@/lib/characters";
 
 export default function HomePage() {
   const isTablet = useIsTablet();
@@ -32,7 +34,27 @@ export default function HomePage() {
   const [showConsole, setShowConsole] = useState(true);
   const { data: projects, isLoading } = useProjects();
   const createProject = useCreateProject();
+  const { mutate: updateProject } = useUpdateProject();
   const [generatedCode, setGeneratedCode] = useState<string>('');
+  const { toast } = useToast();
+
+  const [unlockedCharacters, setUnlockedCharacters] = useState<string[]>(() => {
+    const saved = localStorage.getItem('unlockedCharacters');
+    return saved ? JSON.parse(saved) : ['Fennec'];
+  });
+
+  const [selectedCharacter, setSelectedCharacter] = useState<string>(() => {
+    const saved = localStorage.getItem('selectedCharacter');
+    // Ensure the saved character is actually unlocked before setting it
+    const savedUnlocked = localStorage.getItem('unlockedCharacters');
+    const currentlyUnlocked = savedUnlocked ? JSON.parse(savedUnlocked) : ['Fennec'];
+    return saved && currentlyUnlocked.includes(saved) ? saved : 'Fennec';
+  });
+
+  const handleCharacterChange = (characterName: string) => {
+    setSelectedCharacter(characterName);
+    localStorage.setItem('selectedCharacter', characterName);
+  };
 
   useEffect(() => {
     // If loading is finished and there are no projects, create one.
@@ -44,43 +66,62 @@ export default function HomePage() {
       })
     }
   }, [isLoading, projects, createProject]);
-  const { mutate: updateProject } = useUpdateProject();
+  const { user, logout, updateProgress } = useAuth();
   const [, setLocation] = useLocation();
-  const { user, logout } = useAuth();
 
+  // --- State Management Refactor ---
+  // The user object from the backend is now the source of truth.
+  const currentCourseIndex = user?.currentCourseIndex ?? 0;
+  const courseCompletions = user?.courseCompletions ?? new Array(courses.length).fill(false);
+  
   const [programmingMode, setProgrammingMode] = useState<'visual' | 'python' | null>(() => {
     return localStorage.getItem('programmingMode') as 'visual' | 'python' | null;
   });
 
+  // State for UI elements, not related to user progress
   const [showCourse, setShowCourse] = useState(true);
-  const [currentCourseIndex, setCurrentCourseIndex] = useState(() => {
-    const savedCourseIndex = localStorage.getItem('currentCourseIndex');
-    return savedCourseIndex ? parseInt(savedCourseIndex, 10) : 0;
-  });
-
-  const [courseCompletions, setCourseCompletions] = useState<boolean[]>(() => {
-    const savedCompletions = localStorage.getItem('courseCompletions');
-    return savedCompletions ? JSON.parse(savedCompletions) : new Array(courses.length).fill(false);
-  });
 
   const course = courses[currentCourseIndex];
   const isCourseComplete = courseCompletions[currentCourseIndex];
 
-  const handleCourseComplete = useCallback(() => {
+  const handleCourseComplete = useCallback(async () => {
+    if (courseCompletions[currentCourseIndex]) return; // Prevent re-triggering
+
     const newCompletions = [...courseCompletions];
     newCompletions[currentCourseIndex] = true;
-    setCourseCompletions(newCompletions);
-    localStorage.setItem('courseCompletions', JSON.stringify(newCompletions));
-  }, [courseCompletions, currentCourseIndex]);
+    
+    try {
+      await updateProgress({ courseCompletions: newCompletions });
+    } catch (error) {
+      console.error("Failed to update course completions", error);
+      // Optionally, show a toast to the user
+    }
 
-  const handleNextCourse = () => {
+    // Character Unlock Logic (client-side effect)
+    const characterToUnlock = CHARACTERS.find(c => c.unlockLevel === (currentCourseIndex + 1));
+    if (characterToUnlock && !unlockedCharacters.includes(characterToUnlock.name)) {
+      const newUnlocked = [...unlockedCharacters, characterToUnlock.name];
+      setUnlockedCharacters(newUnlocked);
+      localStorage.setItem('unlockedCharacters', JSON.stringify(newUnlocked));
+      toast({
+        title: "✨ Character Unlocked! ✨",
+        description: `You can now select the "${characterToUnlock.name}" character from the dropdown in the simulation panel.`,
+      });
+    }
+  }, [courseCompletions, currentCourseIndex, unlockedCharacters, toast, updateProgress]);
+
+  const handleNextCourse = async () => {
     if (currentCourseIndex < courses.length - 1) {
       if (currentProject) {
         updateProject({ id: currentProject.id, updates: { blocks: [] } });
       }
       const nextCourseIndex = currentCourseIndex + 1;
-      localStorage.setItem('currentCourseIndex', nextCourseIndex.toString());
-      window.location.reload();
+      try {
+        await updateProgress({ currentCourseIndex: nextCourseIndex });
+        window.location.reload(); // Force a full state refresh
+      } catch (error) {
+        console.error("Failed to navigate to next course", error);
+      }
     }
   };
 
@@ -190,9 +231,16 @@ export default function HomePage() {
     );
   }
 
-  const handleSelectCourse = (index: number) => {
-    localStorage.setItem('currentCourseIndex', index.toString());
-    window.location.reload();
+  const handleSelectCourse = async (index: number) => {
+    if (currentProject) {
+      await updateProject({ id: currentProject.id, updates: { blocks: [] } });
+    }
+    try {
+      await updateProgress({ currentCourseIndex: index });
+      window.location.reload(); // Force a full state refresh
+    } catch (error) {
+      console.error("Failed to select course", error);
+    }
   };
 
   return (
@@ -273,6 +321,9 @@ export default function HomePage() {
                           fullWidth
                           onCourseComplete={handleCourseComplete}
                           course={course}
+                          unlockedCharacters={unlockedCharacters}
+                          selectedCharacter={selectedCharacter}
+                          onCharacterChange={handleCharacterChange}
                         />
                       </ResizablePanel>
                       {showConsole && (

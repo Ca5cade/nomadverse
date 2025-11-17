@@ -2,6 +2,13 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { Button } from "@/components/ui/button";
 import { Play, Pause, RotateCcw, Settings, Zap, Activity, Maximize2, Minimize2, Camera } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RobotSimulator } from '@/lib/robotSimulator';
 import { Project } from '@shared/schema';
 import { Course } from '@/lib/courses';
@@ -16,6 +23,9 @@ interface SimulationViewportProps {
   onCourseComplete?: () => void;
   course?: Course;
   isCourseComplete?: boolean;
+  unlockedCharacters: string[];
+  selectedCharacter: string;
+  onCharacterChange: (characterName: string) => void;
 }
 
 export default function SimulationViewport({
@@ -27,7 +37,10 @@ export default function SimulationViewport({
   onStopSimulation = () => {},
   onCourseComplete = () => {},
   course,
-  isCourseComplete
+  isCourseComplete,
+  unlockedCharacters,
+  selectedCharacter,
+  onCharacterChange,
 }: SimulationViewportProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
@@ -38,15 +51,6 @@ export default function SimulationViewport({
   const mountRef = useRef<HTMLDivElement>(null);
   const simulatorRef = useRef<RobotSimulator | null>(null);
   const animationIdRef = useRef<number>();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && simulatorRef.current) {
-      const url = URL.createObjectURL(file);
-      simulatorRef.current.loadModel(url);
-    }
-  };
 
   const runSimulation = useCallback(() => {
     if (simulatorRef.current && blocks.length > 0) {
@@ -97,10 +101,11 @@ export default function SimulationViewport({
     };
   }, []);
 
+  // Effect to initialize the simulator
   useEffect(() => {
-    if (!mountRef.current) return;
+    if (!mountRef.current || !course) return;
 
-    const simulator = new RobotSimulator(mountRef.current, onCourseComplete, course?.obstacles);
+    const simulator = new RobotSimulator(mountRef.current, onCourseComplete, course, selectedCharacter);
     simulatorRef.current = simulator;
     setIsLoading(false);
 
@@ -117,8 +122,15 @@ export default function SimulationViewport({
       }
       simulator.cleanup();
     };
-  }, [onCourseComplete, course?.obstacles]);
+  }, [onCourseComplete, course]);
 
+  // Effect to handle character changes
+  useEffect(() => {
+    if (simulatorRef.current) {
+      simulatorRef.current.loadCharacter(selectedCharacter);
+    }
+  }, [selectedCharacter]);
+  
   useEffect(() => {
     if (runTrigger > 0) {
       runSimulation();
@@ -161,13 +173,19 @@ export default function SimulationViewport({
                   <Play className="w-3.5 h-3.5" />
                   <span>Run</span>
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white flex items-center space-x-2 shadow-md hover:shadow-lg transition-all hover:scale-105 font-semibold px-4"
-                >
-                  <span>Load Model</span>
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <label htmlFor="character-select" className="text-sm font-medium text-text-secondary">Character:</label>
+                  <Select value={selectedCharacter} onValueChange={onCharacterChange}>
+                    <SelectTrigger id="character-select" className="w-[150px] bg-panel-bg border-border-color text-text-primary">
+                      <SelectValue placeholder="Character" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unlockedCharacters.map(charName => (
+                        <SelectItem key={charName} value={charName}>{charName}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </>
             ) : (
               <Button
@@ -212,13 +230,6 @@ export default function SimulationViewport({
             ))}
           </div>
         </div>
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          style={{ display: 'none' }}
-          accept=".gltf,.glb"
-        />
       </div>
       )}
 

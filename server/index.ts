@@ -74,6 +74,7 @@ app.use((req, res, next) => {
 
   // Error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    console.error(err); // Add this line to log the full error
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
