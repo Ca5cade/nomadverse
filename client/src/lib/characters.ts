@@ -1,3 +1,9 @@
+import FennecModel from '@/assets/models/Fennec.glb';
+import FishModel from '@/assets/models/Fish.glb';
+import MiniGrootModel from '@/assets/models/MiniGroot.glb';
+import LavaGolemModel from '@/assets/models/LavaGolem.glb';
+import AstronautModel from '@/assets/models/Astronaut.glb';
+
 export interface Character {
   name: string;
   modelPath: string;
@@ -7,27 +13,27 @@ export interface Character {
 export const CHARACTERS: Character[] = [
   {
     name: 'Fennec',
-    modelPath: '/src/assets/models/Fennec.glb',
+    modelPath: FennecModel,
     unlockLevel: 0, // Unlocked by default
   },
   {
     name: 'Fish',
-    modelPath: '/src/assets/models/Fish.glb',
+    modelPath: FishModel,
     unlockLevel: 1,
   },
   {
     name: 'Mini Groot',
-    modelPath: '/src/assets/models/MiniGroot.glb',
+    modelPath: MiniGrootModel,
     unlockLevel: 2,
   },
   {
     name: 'Lava Golem',
-    modelPath: '/src/assets/models/LavaGolem.glb',
+    modelPath: LavaGolemModel,
     unlockLevel: 3,
   },
   {
     name: 'Astronaut',
-    modelPath: '/src/assets/models/Astronaut.glb',
+    modelPath: AstronautModel,
     unlockLevel: 4,
   },
 ];
