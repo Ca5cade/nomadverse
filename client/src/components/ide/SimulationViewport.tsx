@@ -48,6 +48,8 @@ export default function SimulationViewport({
   const [simulationSpeed, setSimulationSpeed] = useState(1);
   const [viewMode, setViewMode] = useState<'3d' | 'top' | 'side'>('3d');
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isCharacterLoading, setIsCharacterLoading] = useState(false); // NEW state
+  const [characterLoadError, setCharacterLoadError] = useState<string | null>(null); // NEW state
   const mountRef = useRef<HTMLDivElement>(null);
   const simulatorRef = useRef<RobotSimulator | null>(null);
   const animationIdRef = useRef<number>();
@@ -101,13 +103,34 @@ export default function SimulationViewport({
     };
   }, []);
 
+  const handleCharacterLoadComplete = useCallback(() => {
+    setIsCharacterLoading(false);
+    setCharacterLoadError(null);
+    setIsLoading(false); // Only set overall loading to false after character is loaded
+  }, []);
+
+  const handleCharacterLoadError = useCallback((error: any) => {
+    setIsCharacterLoading(false);
+    setCharacterLoadError(`Failed to load character: ${error.message || error}`);
+    setIsLoading(false); // Still set overall loading to false, but with an error
+    console.error("Character loading error:", error);
+  }, []);
+
   // Effect to initialize the simulator
   useEffect(() => {
     if (!mountRef.current || !course) return;
 
-    const simulator = new RobotSimulator(mountRef.current, onCourseComplete, course, selectedCharacter);
+    setIsCharacterLoading(true); // Set loading true before simulator init
+    const simulator = new RobotSimulator(
+      mountRef.current,
+      onCourseComplete,
+      course,
+      selectedCharacter,
+      handleCharacterLoadComplete, // Pass callback
+      handleCharacterLoadError // Pass callback
+    );
     simulatorRef.current = simulator;
-    setIsLoading(false);
+    // setIsLoading(false); // Moved to handleCharacterLoadComplete
 
     const animate = () => {
       animationIdRef.current = requestAnimationFrame(animate);
@@ -122,14 +145,20 @@ export default function SimulationViewport({
       }
       simulator.cleanup();
     };
-  }, [onCourseComplete, course]);
+  }, [onCourseComplete, course, selectedCharacter, handleCharacterLoadComplete, handleCharacterLoadError]); // Added selectedCharacter to dependencies
 
   // Effect to handle character changes
   useEffect(() => {
-    if (simulatorRef.current) {
-      simulatorRef.current.loadCharacter(selectedCharacter);
+    if (simulatorRef.current && !isLoading) { // Only try to load if simulator is initialized
+      setIsCharacterLoading(true);
+      setCharacterLoadError(null); // Clear previous errors
+      simulatorRef.current.loadCharacter(
+        selectedCharacter,
+        handleCharacterLoadComplete,
+        handleCharacterLoadError
+      );
     }
-  }, [selectedCharacter]);
+  }, [selectedCharacter, isLoading, handleCharacterLoadComplete, handleCharacterLoadError]);
   
   useEffect(() => {
     if (runTrigger > 0) {
@@ -243,11 +272,22 @@ export default function SimulationViewport({
       </Button>
 
       {/* Canvas */}
-      {isLoading && (
+      {(isLoading || isCharacterLoading) && ( // Show loading if either is true
         <div className="absolute inset-0 flex items-center justify-center bg-panel-bg/50 backdrop-blur-sm z-20">
           <div className="text-center">
             <div className="w-8 h-8 border-2 border-accent-blue border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-            <p className="text-sm text-text-muted">Initializing 3D simulation...</p>
+            <p className="text-sm text-text-muted">
+              {characterLoadError ? characterLoadError : (isCharacterLoading ? `Loading ${selectedCharacter} model...` : 'Initializing 3D simulation...')}
+            </p>
+          </div>
+        </div>
+      )}
+      {characterLoadError && !isCharacterLoading && ( // Show error if present and not loading
+        <div className="absolute inset-0 flex items-center justify-center bg-red-900/50 backdrop-blur-sm z-20">
+          <div className="text-center text-white p-4 rounded-lg bg-red-700 shadow-lg">
+            <p className="text-lg font-bold">Error Loading Model</p>
+            <p className="text-sm">{characterLoadError}</p>
+            <p className="text-xs mt-2">Please try again or select a different character.</p>
           </div>
         </div>
       )}

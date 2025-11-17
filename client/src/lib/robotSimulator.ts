@@ -24,7 +24,14 @@ export class RobotSimulator {
 
   private obstacles: { position: { x: number; y: number; z: number }; size: { x: number; y: number; z: number } }[] = [];
 
-  constructor(container: HTMLElement, onCourseComplete: () => void, course: Course, initialCharacterName: string) {
+  constructor(
+    container: HTMLElement,
+    onCourseComplete: () => void,
+    course: Course,
+    initialCharacterName: string,
+    onCharacterLoadComplete?: () => void,
+    onCharacterLoadError?: (error: any) => void
+  ) {
     this.container = container;
     this.onCourseComplete = onCourseComplete;
     this.course = course;
@@ -32,7 +39,7 @@ export class RobotSimulator {
       this.obstacles = course.obstacles;
     }
     this.initThreeJS();
-    this.loadCharacter(initialCharacterName);
+    this.loadCharacter(initialCharacterName, onCharacterLoadComplete, onCharacterLoadError);
     this.createEnvironment();
     this.setupLighting();
     this.handleResize();
@@ -271,22 +278,45 @@ export class RobotSimulator {
     this.controls.target.set(0, 0, 0);
   }
 
-  public loadCharacter(characterName: string) {
+  public loadCharacter(
+    characterName: string,
+    onLoadComplete?: () => void,
+    onLoadError?: (error: any) => void
+  ) {
     const character = getCharacterByName(characterName);
     if (!character) {
       console.error(`Character "${characterName}" not found.`);
+      if (onLoadError) onLoadError(new Error(`Character "${characterName}" not found.`));
       // Optionally, load a default character here
       if (this.robot) return; // Do not load default if a robot already exists
       const defaultChar = getCharacterByName('Fennec');
-      if(defaultChar) this.loader.load(defaultChar.modelPath, (gltf) => this.setModel(gltf.scene, 'Fennec'));
+      if(defaultChar) this.loader.load(
+        defaultChar.modelPath,
+        (gltf) => {
+          this.setModel(gltf.scene, 'Fennec');
+          if (onLoadComplete) onLoadComplete();
+        },
+        undefined, // onProgress
+        (error) => {
+          console.error(`An error happened while loading default character "Fennec".`, error);
+          if (onLoadError) onLoadError(error);
+        }
+      );
       return;
     }
 
-    this.loader.load(character.modelPath, (gltf) => {
-      this.setModel(gltf.scene, character.name);
-    }, undefined, (error) => {
-      console.error(`An error happened while loading character "${characterName}".`, error);
-    });
+    this.loader.load(
+      character.modelPath,
+      (gltf) => {
+        this.setModel(gltf.scene, character.name);
+        if (onLoadComplete) onLoadComplete(); // Call on success
+      },
+      undefined, // onProgress - we could add a progress callback here if needed
+      (error) => {
+        console.error(`An error happened while loading character "${characterName}".`, error);
+        if (onLoadError) onLoadError(error); // Call on error
+      }
+    );
   }
 
   private createDesertEnvironment() {
